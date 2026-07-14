@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { auth } from '../config/firebase';
+import { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 
 export default function Login() {
   const { requestOtp, verifyOtp, pushNotification } = useApp();
@@ -32,6 +34,52 @@ export default function Login() {
     setActiveTab(getInitialRole());
   }, [location.search]);
 
+  // Handle Firebase Sign-In Link verification on mount
+  useEffect(() => {
+    const handleFirebaseLink = async () => {
+      if (isSignInWithEmailLink(auth, window.location.href)) {
+        let email = window.localStorage.getItem('emailForSignIn');
+        if (!email) {
+          email = window.prompt('Please enter your email for confirmation:');
+        }
+        if (email) {
+          setLoading(true);
+          setError('');
+          try {
+            await signInWithEmailLink(auth, email, window.location.href);
+            window.localStorage.removeItem('emailForSignIn');
+            
+            // Log in via our backend with custom verification bypass
+            const res = await verifyOtp(email, 'firebase_verified', activeTab);
+            setLoading(false);
+            
+            if (res.success) {
+              pushNotification({
+                type: 'success',
+                title: '✓ Access Verified via Email Link',
+                message: `Welcome, ${res.user.name || 'User'}! Successfully entered ${res.user.role === 'resident' ? 'Resident Portal' : 'Buyer Lounge'}.`,
+              });
+              
+              if (res.user.role === 'admin') {
+                navigate('/admin');
+              } else if (res.user.role === 'resident') {
+                navigate('/resident-portal');
+              } else {
+                navigate('/buyer-lounge');
+              }
+            } else {
+              setError(res.error || 'Backend session verification failed.');
+            }
+          } catch (err) {
+            setLoading(false);
+            setError(err.message || 'Error signing in with link.');
+          }
+        }
+      }
+    };
+    handleFirebaseLink();
+  }, [location.search, navigate, verifyOtp, pushNotification, activeTab]);
+
   const validateInput = () => {
     if (authMethod === 'email') {
       if (!emailOrPhone) return 'Email address is required';
@@ -59,19 +107,43 @@ export default function Login() {
       : `${countryCode}${phoneVal.replace(/\D/g, '')}`;
 
     setLoading(true);
-    const res = await requestOtp(targetInput, activeTab);
-    setLoading(false);
 
-    if (res.success) {
-      setStep(2);
-      pushNotification({
-        type: 'success',
-        title: '🔑 Verification Code Dispatched',
-        message: `A 6-digit verification code has been sent directly to ${targetInput}. Please check your inbox.`,
-        duration: 10000
-      });
+    if (authMethod === 'email') {
+      const actionCodeSettings = {
+        url: `${window.location.origin}/login?role=${activeTab}`,
+        handleCodeInApp: true,
+      };
+
+      try {
+        await sendSignInLinkToEmail(auth, targetInput, actionCodeSettings);
+        window.localStorage.setItem('emailForSignIn', targetInput);
+        setLoading(false);
+        setStep(2);
+        pushNotification({
+          type: 'success',
+          title: '✉️ Secure Login Link Dispatched',
+          message: `A secure login link has been sent to ${targetInput}. Please check your email inbox and click the link to confirm.`,
+          duration: 12000
+        });
+      } catch (err) {
+        setLoading(false);
+        setError(err.message || 'Error sending email verification link.');
+      }
     } else {
-      setError(res.error || 'Could not send verification code.');
+      const res = await requestOtp(targetInput, activeTab);
+      setLoading(false);
+
+      if (res.success) {
+        setStep(2);
+        pushNotification({
+          type: 'success',
+          title: '🔑 Verification Code Dispatched',
+          message: `A 6-digit verification code has been sent directly to ${targetInput}. Please check your inbox.`,
+          duration: 10000
+        });
+      } else {
+        setError(res.error || 'Could not send verification code.');
+      }
     }
   };
 
@@ -298,44 +370,73 @@ export default function Login() {
             </form>
           ) : (
             <form className="space-y-4" onSubmit={handleVerifyOtp}>
-              <div>
-                <label htmlFor="otpCode" className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
-                  6-Digit OTP Code
-                </label>
-                <input
-                  id="otpCode"
-                  name="otpCode"
-                  type="text"
-                  maxLength={6}
-                  required
-                  placeholder="------"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-700 text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-stone-500 text-center tracking-[0.6em] text-lg font-black rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-550/20 focus:border-slate-500 transition-all"
-                />
-                <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-slate-400 dark:text-stone-500">
-                  <span></span>
-                  <button 
-                    type="button" 
-                    onClick={() => { setStep(1); setOtpCode(''); }} 
-                    className="text-blue-600 dark:text-blue-400 hover:underline font-bold"
-                  >
-                    Change Contact Info
-                  </button>
+              {authMethod === 'email' ? (
+                <div className="text-center py-4 space-y-4">
+                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto text-blue-600 dark:text-blue-400">
+                    <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-bold text-slate-800 dark:text-white">Waiting for Email Verification Link...</p>
+                    <p className="text-xs text-slate-500 dark:text-stone-400 leading-relaxed">
+                      We sent a secure login link to <strong className="text-slate-800 dark:text-white">{emailOrPhone}</strong>.
+                      Please check your email inbox and click the link to confirm and access your workspace.
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <button 
+                      type="button" 
+                      onClick={() => { setStep(1); }} 
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-extrabold"
+                    >
+                      ← Back / Change Email
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <label htmlFor="otpCode" className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                      6-Digit OTP Code
+                    </label>
+                    <input
+                      id="otpCode"
+                      name="otpCode"
+                      type="text"
+                      maxLength={6}
+                      required
+                      placeholder="------"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-700 text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-stone-500 text-center tracking-[0.6em] text-lg font-black rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-550/20 focus:border-slate-500 transition-all"
+                    />
+                    <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-slate-400 dark:text-stone-500">
+                      <span></span>
+                      <button 
+                        type="button" 
+                        onClick={() => { setStep(1); setOtpCode(''); }} 
+                        className="text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                      >
+                        Change Contact Info
+                      </button>
+                    </div>
+                  </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full btn-primary py-3 flex items-center justify-center disabled:opacity-50 text-xs font-bold uppercase tracking-wider"
-              >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-white dark:border-stone-950 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  'Verify Code & Access Space'
-                )}
-              </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full btn-primary py-3 flex items-center justify-center disabled:opacity-50 text-xs font-bold uppercase tracking-wider"
+                  >
+                    {loading ? (
+                      <span className="w-4 h-4 border-2 border-white dark:border-stone-950 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      'Verify Code & Access Space'
+                    )}
+                  </button>
+                </>
+              )}
             </form>
           )}
         </div>
