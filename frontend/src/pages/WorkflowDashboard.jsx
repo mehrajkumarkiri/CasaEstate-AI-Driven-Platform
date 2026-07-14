@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
@@ -50,14 +51,22 @@ const ALERTS_FEED = [
 
 export default function WorkflowDashboard({ embedMode = false, initialRole = null }) {
   const { pushNotification } = useApp();
+  const navigate = useNavigate();
+  
   const [userRole, setUserRole] = useState(() => {
     if (initialRole) {
       return initialRole === 'buyer' || initialRole === 'resident' ? 'client' : initialRole;
     }
     return null;
   });
-  const [authState, setAuthState] = useState({ email: '', password: '' });
+  
   const [showLoginOverlay, setShowLoginOverlay] = useState(!embedMode && !initialRole);
+  
+  // Passcode gate states
+  const [passcodeMode, setPasscodeMode] = useState(false);
+  const [targetRole, setTargetRole] = useState(null);
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
 
   useEffect(() => {
     if (initialRole) {
@@ -69,7 +78,6 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
   // Workflow states
   const [workflow, setWorkflow] = useState(INITIAL_WORKFLOW_STATE);
   const [consoleLoading, setConsoleLoading] = useState(false);
-  const [activeFaq, setActiveFaq] = useState(null);
   const consoleEndRef = useRef(null);
 
   // Client alerts feed
@@ -82,19 +90,43 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
   }, [workflow.consoleLogs, consoleLoading]);
 
   // Auth logins
-  const handleMockLogin = (role) => {
-    setUserRole(role);
-    setShowLoginOverlay(false);
-    pushNotification({
-      type: 'success',
-      title: '✓ Access Granted',
-      message: `Signed in successfully as ${role.toUpperCase()}`
-    });
+  const handleRoleSelection = (role) => {
+    if (role === 'client') {
+      setUserRole('client');
+      setShowLoginOverlay(false);
+      pushNotification({
+        type: 'success',
+        title: '✓ Access Granted',
+        message: 'Signed in successfully as Client / Investor (Read-only)'
+      });
+    } else {
+      setTargetRole(role);
+      setPasscodeMode(true);
+      setPasscodeInput('');
+      setPasscodeError('');
+    }
+  };
+
+  const handlePasscodeSubmit = () => {
+    const correctPass = targetRole === 'admin' ? 'admin123' : 'engineer123';
+    if (passcodeInput === correctPass) {
+      setUserRole(targetRole);
+      setShowLoginOverlay(false);
+      setPasscodeMode(false);
+      pushNotification({
+        type: 'success',
+        title: '✓ Access Granted',
+        message: `Signed in successfully as ${targetRole === 'admin' ? 'Administrator' : 'Site Engineer'}`
+      });
+    } else {
+      setPasscodeError(`Invalid password for ${targetRole === 'admin' ? 'Admin' : 'Engineer'}. Use ${correctPass}`);
+    }
   };
 
   const handleLogout = () => {
     setUserRole(null);
     setShowLoginOverlay(true);
+    setPasscodeMode(false);
     setWorkflow(INITIAL_WORKFLOW_STATE);
     setClientAlerts(ALERTS_FEED);
   };
@@ -137,7 +169,6 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
       ]
     }));
 
-    // Step 2 and 3 simulation
     setTimeout(() => {
       setConsoleLoading(false);
       setWorkflow(prev => {
@@ -170,7 +201,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
           projectMapState: 'Active Curing Phase',
           documents: newDocs,
           consoleLogs: newLogs,
-          aiSummary: "📊 BuildFlow AI — Noida Tower A progress report:\n\nSlab L4 Casting phase completed successfully. Real-time ultrasonic scans verify steel laying parameters. AI has recalculated critical path models; ambient concrete curing stage is active. No timeline bottlenecks or cost overruns detected."
+          aiSummary: "📊 Casa AI — Noida Tower A progress report:\n\nSlab L4 Casting phase completed successfully. Real-time ultrasonic scans verify steel laying parameters. AI has recalculated critical path models; ambient concrete curing stage is active. No timeline bottlenecks or cost overruns detected."
         };
       });
 
@@ -183,74 +214,133 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
   };
 
   return (
-    <div className={embedMode ? "w-full text-slate-100 flex flex-col font-sans" : "pt-16 min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans"}>
+    <div className={embedMode ? "w-full text-slate-800 dark:text-slate-100 flex flex-col font-sans" : "pt-24 pb-16 min-h-screen bg-[#f4f4f3] dark:bg-stone-950 text-slate-800 dark:text-slate-105 flex flex-col font-sans transition-colors duration-350"}>
       
-      {/* Sleek Minimalist Login Gate */}
+      {/* Sleek Blue/Slate Light Login Gate */}
       {showLoginOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
-            <div className="text-center space-y-1">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-lg font-black mx-auto mb-2 shadow-lg shadow-blue-500/25">
-                ⚙️
-              </div>
-              <h2 className="text-xl font-extrabold tracking-tight text-white uppercase font-display">Workflow AI Portal</h2>
-              <p className="text-xs text-slate-400 font-medium">Log in to view autonomous Multi-Department approvals</p>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-slate-205 dark:border-stone-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+            
+            {!passcodeMode ? (
+              <>
+                <div className="text-center space-y-1">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white text-lg font-black mx-auto mb-2 shadow-lg shadow-blue-500/25">
+                    🤖
+                  </div>
+                  <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white uppercase font-display">Casa AI Portal</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Log in to view autonomous Multi-Department approvals</p>
+                </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Judge Access Role</label>
-                <div className="grid grid-cols-1 gap-2">
+                <div className="space-y-3">
                   {[
-                    { role: 'engineer', label: '🔧 Site Engineer', desc: 'Log field status' },
-                    { role: 'client', label: '🏢 Client / Investor', desc: 'View reports & compliance docs' },
-                    { role: 'admin', label: '📊 Admin / Builder Dashboard', desc: 'Full pipeline command panel' }
+                    { role: 'client', label: '🏢 Client / Investor', desc: 'View reports & compliance docs (Instant)' },
+                    { role: 'engineer', label: '🔧 Site Engineer', desc: 'Log field status (Needs password)' },
+                    { role: 'admin', label: '📊 Admin / Builder Dashboard', desc: 'Full pipeline command panel (Needs password)' }
                   ].map((profile) => (
                     <button
                       key={profile.role}
-                      onClick={() => handleMockLogin(profile.role)}
-                      className="p-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-xl flex items-center justify-between text-left transition-all hover:border-slate-700 hover:shadow-md"
+                      onClick={() => handleRoleSelection(profile.role)}
+                      className="w-full p-4 bg-slate-50 hover:bg-slate-100 dark:bg-stone-850 dark:hover:bg-stone-800 border border-slate-200 dark:border-stone-800 rounded-2xl flex items-center justify-between text-left transition-all hover:border-blue-500/40"
                     >
                       <div>
-                        <p className="text-xs font-bold text-white">{profile.label}</p>
-                        <p className="text-[10px] text-slate-500 mt-0.5">{profile.desc}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white">{profile.label}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{profile.desc}</p>
                       </div>
-                      <span className="text-xs text-blue-500 font-bold">Access →</span>
+                      <span className="text-xs text-blue-600 dark:text-blue-400 font-bold">Select →</span>
                     </button>
                   ))}
                 </div>
-              </div>
 
-              <div className="border-t border-slate-800/80 pt-4 text-center">
-                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">BuildFlow AI Sandbox Mode</p>
-              </div>
-            </div>
+                <div className="flex items-center justify-between border-t border-slate-105 dark:border-stone-800 pt-4">
+                  <button
+                    onClick={() => navigate('/')}
+                    className="text-[10px] text-slate-500 hover:text-slate-900 dark:text-stone-400 dark:hover:text-white font-bold uppercase tracking-wider transition-colors"
+                  >
+                    ← Cancel & Exit
+                  </button>
+                  <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Casa AI Sandbox Mode</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center space-y-1">
+                  <div className="w-10 h-10 rounded-xl bg-amber-600 flex items-center justify-center text-white text-lg font-black mx-auto mb-2 shadow-lg">
+                    🔒
+                  </div>
+                  <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white uppercase font-display">Passcode Required</h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Enter authorization code for {targetRole === 'admin' ? 'Administrator' : 'Site Engineer'}</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <input
+                      type="password"
+                      placeholder={targetRole === 'admin' ? "admin123" : "engineer123"}
+                      value={passcodeInput}
+                      onChange={(e) => setPasscodeInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handlePasscodeSubmit()}
+                      className="w-full bg-slate-50 dark:bg-stone-950 border border-slate-200 dark:border-stone-800 text-xs px-4 py-3 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-blue-500 text-center font-mono tracking-widest"
+                      autoFocus
+                    />
+                    {passcodeError && (
+                      <p className="text-[10px] text-red-600 font-bold mt-2 text-center">{passcodeError}</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPasscodeMode(false)}
+                      className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-stone-700 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handlePasscodeSubmit}
+                      className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md"
+                    >
+                      Verify
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-105 dark:border-stone-800 pt-4 text-center">
+                  <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Passcodes: admin123 / engineer123</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {/* Main Dashboard Panel */}
       {!showLoginOverlay && (
-        <div className={embedMode ? "w-full flex flex-col space-y-6 text-left pt-2" : "max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 flex flex-col space-y-6 text-left"}>
+        <div className={embedMode ? "w-full flex flex-col space-y-6 text-left pt-2" : "max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col space-y-6 text-left"}>
           
           {/* Header Console */}
           {!embedMode && (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest font-mono">Autonomous Execution Engine Active</span>
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest font-mono">Autonomous Execution Engine Active</span>
                 </div>
-                <h2 className="text-lg font-black text-white uppercase tracking-tight font-display mt-0.5">Live Workflow Control Panel</h2>
+                <h2 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight font-display mt-1">Casa AI Control Panel</h2>
               </div>
               
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] bg-slate-800 border border-slate-700 text-slate-300 font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl">
+              <div className="flex items-center gap-2.5">
+                {/* Back button */}
+                <button
+                  onClick={() => navigate('/')}
+                  className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-stone-700 px-3.5 py-2 rounded-xl transition-all"
+                >
+                  ← Back to Home
+                </button>
+                <span className="text-[10px] bg-slate-50 dark:bg-stone-850 border border-slate-200 dark:border-stone-750 text-slate-600 dark:text-slate-350 font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl">
                   Role: {userRole === 'engineer' ? 'Site Engineer' : userRole === 'client' ? 'Client / Investor' : 'Administrator'}
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="text-[10px] font-bold uppercase tracking-wider bg-red-950/20 text-red-400 border border-red-900/30 hover:bg-red-900/30 px-3.5 py-1.5 rounded-xl transition-all"
+                  className="text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 px-3.5 py-2 rounded-xl transition-all"
                 >
                   Sign Out
                 </button>
@@ -258,27 +348,27 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
             </div>
           )}
 
-          {/* Grid Layout splits: 2 columns for pipeline/reports, 1 for vault & logs */}
+          {/* Grid Layout splits */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* Left Side: Pipeline Workflow Engine (lg:col-span-8) */}
+            {/* Left Side: Pipeline Workflow Engine */}
             <div className="lg:col-span-8 space-y-6">
               
               {/* Pipeline Sequence Map */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">Stage: Tower A - Slab Casting</h3>
+              <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 space-y-6 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono">Stage: Tower A - Slab Casting</h3>
                 
-                {/* Horizontal Step sequence progress tracker */}
+                {/* Step sequence progress tracker */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative">
                   
                   {/* Step 1 */}
                   <div className={`p-4 rounded-xl border transition-all ${
                     workflow.step1Completed 
-                      ? 'bg-emerald-950/20 border-emerald-900 text-emerald-300' 
-                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                      ? 'bg-blue-50 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 shadow-xs' 
+                      : 'bg-slate-50 dark:bg-stone-950 border-slate-100 dark:border-stone-850 text-slate-500 dark:text-slate-400'
                   }`}>
                     <p className="text-[9px] font-extrabold uppercase tracking-widest mb-1.5">Step 1: Field Checklist</p>
-                    <p className="text-xs font-bold text-white mb-2">Engineer Approval</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white mb-2">Engineer Approval</p>
                     <span className="text-[10px] font-semibold">
                       {workflow.step1Completed ? '✓ Completed' : 'Pending checklists'}
                     </span>
@@ -287,26 +377,26 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   {/* Step 2 */}
                   <div className={`p-4 rounded-xl border transition-all ${
                     workflow.step2State === 'completed'
-                      ? 'bg-emerald-950/20 border-emerald-900 text-emerald-300'
+                      ? 'bg-blue-50 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 shadow-xs'
                       : workflow.step2State === 'processing'
-                      ? 'bg-blue-950/20 border-blue-900 text-blue-300 animate-pulse'
-                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                      ? 'bg-blue-50/50 dark:bg-blue-950/10 border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 animate-pulse'
+                      : 'bg-slate-50 dark:bg-stone-950 border-slate-100 dark:border-stone-850 text-slate-500 dark:text-slate-400'
                   }`}>
                     <p className="text-[9px] font-extrabold uppercase tracking-widest mb-1.5">Step 2: AI Telemetry Handshake</p>
-                    <p className="text-xs font-bold text-white mb-2">Automated Audit</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white mb-2">Automated Audit</p>
                     <span className="text-[10px] font-semibold">
-                      {workflow.step2State === 'completed' ? '✓ AI Approved' : workflow.step2State === 'processing' ? '🤖 Verifying telemetry...' : 'Awaiting Step 1'}
+                      {workflow.step2State === 'completed' ? '✓ AI Approved' : workflow.step2State === 'processing' ? '🤖 Verifying...' : 'Awaiting Step 1'}
                     </span>
                   </div>
 
                   {/* Step 3 */}
                   <div className={`p-4 rounded-xl border transition-all ${
                     workflow.step3State === 'completed'
-                      ? 'bg-emerald-950/20 border-emerald-900 text-emerald-300'
-                      : 'bg-slate-950 border-slate-800 text-slate-400'
+                      ? 'bg-blue-50 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 shadow-xs'
+                      : 'bg-slate-50 dark:bg-stone-950 border-slate-100 dark:border-stone-850 text-slate-500 dark:text-slate-400'
                   }`}>
                     <p className="text-[9px] font-extrabold uppercase tracking-widest mb-1.5">Step 3: Cross-Dept Dispatch</p>
-                    <p className="text-xs font-bold text-white mb-2">Deed & Compliance Ledger</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white mb-2">Deed & Compliance Ledger</p>
                     <span className="text-[10px] font-semibold">
                       {workflow.step3State === 'completed' ? '✓ Ledger Sync Complete' : 'Awaiting AI approval'}
                     </span>
@@ -315,12 +405,17 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                 </div>
 
                 {/* Sub-form splits */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-105 dark:border-stone-800">
                   
                   {/* Step 1 Interactive Form */}
                   <div className="space-y-4">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">🔧 Field Inspection Checklist</h4>
-                    <p className="text-[10px] text-slate-400 leading-relaxed font-semibold">Site Engineer must audit and toggle all compliance parameters before concrete pouring.</p>
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">🔧 Field Inspection Checklist</h4>
+                      {userRole === 'client' && (
+                        <span className="text-[8px] bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-200 dark:border-amber-900/30 px-2 py-0.5 rounded uppercase font-bold">Read-Only</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">Site Engineer must audit and toggle all compliance parameters before concrete pouring.</p>
                     
                     <div className="space-y-2">
                       {[
@@ -334,8 +429,8 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                           onClick={() => handleChecklistToggle(item.id)}
                           className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs transition-all ${
                             workflow.checklist[item.id]
-                              ? 'bg-slate-900 text-white border-blue-500/40'
-                              : 'bg-slate-950 text-slate-500 border-slate-805 hover:border-slate-800'
+                              ? 'bg-blue-50/50 dark:bg-stone-850 text-slate-900 dark:text-white border-blue-500/40 shadow-inner'
+                              : 'bg-slate-50 dark:bg-stone-950 text-slate-600 dark:text-slate-450 border-slate-200 dark:border-stone-800 hover:border-slate-300'
                           }`}
                         >
                           <span>{item.label}</span>
@@ -347,7 +442,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                     <button
                       onClick={triggerAIPipeline}
                       disabled={!workflow.step1Completed || consoleLoading || userRole === 'client'}
-                      className="w-full btn-primary text-xs font-bold uppercase tracking-wider py-3 disabled:opacity-40"
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl disabled:opacity-40 transition-all shadow-md"
                     >
                       {consoleLoading ? 'Processing Telemetry...' : '⚡ Trigger AI Pipeline Handshake'}
                     </button>
@@ -355,17 +450,17 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
 
                   {/* Step 2 AI Terminal Console logs */}
                   <div className="space-y-4">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider">🤖 AI Copilot Execution Terminal</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold">Real-time trace logs from autonomous verification pipeline.</p>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">🤖 AI Copilot Execution Terminal</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Real-time trace logs from autonomous verification pipeline.</p>
                     
-                    <div className="bg-black border border-slate-800 rounded-xl p-4 font-mono text-[10px] text-left h-[180px] overflow-y-auto space-y-1.5 scrollbar-hide">
+                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-[10px] text-left h-[180px] overflow-y-auto space-y-1.5 scrollbar-hide text-white">
                       {workflow.consoleLogs.map((log, i) => (
                         <p key={i} className="text-slate-300">
-                          <span className="text-blue-500 font-bold">&gt;</span> {log}
+                          <span className="text-blue-400 font-bold">&gt;</span> {log}
                         </p>
                       ))}
                       {consoleLoading && (
-                        <div className="text-emerald-400 animate-pulse font-bold flex items-center gap-1.5">
+                        <div className="text-blue-400 animate-pulse font-bold flex items-center gap-1.5">
                           <span>█</span> Running ultrasonic model verify...
                         </div>
                       )}
@@ -376,24 +471,24 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                 </div>
               </div>
 
-              {/* Step 3 Outputs Block: Map Mutation and AI Summary text */}
+              {/* Step 3 Outputs Block */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* Main Project Map Mutation status */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+                {/* Project Map status */}
+                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 flex flex-col justify-between shadow-sm">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">Structural Ledger State</span>
-                    <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mt-1">Project Stage Mutation Map</h4>
-                    <p className="text-[10px] text-slate-400 leading-normal mt-1 font-semibold">Automatically updates system-wide phase logs upon AI handshake.</p>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest font-mono">Structural Ledger State</span>
+                    <h4 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mt-1">Project Stage Mutation Map</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal mt-1 font-semibold">Automatically updates system-wide phase logs upon AI handshake.</p>
                   </div>
                   
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-5 my-4 flex items-center justify-between">
+                  <div className="bg-slate-50 dark:bg-stone-950 border border-slate-200 dark:border-stone-850 rounded-xl p-5 my-4 flex items-center justify-between">
                     <div>
                       <p className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Current Phase</p>
-                      <p className="text-sm font-extrabold text-white font-mono mt-0.5">{workflow.projectMapState}</p>
+                      <p className="text-sm font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">{workflow.projectMapState}</p>
                     </div>
                     <span className={`w-3.5 h-3.5 rounded-full ${
-                      workflow.projectMapState === 'Active Curing Phase' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                      workflow.projectMapState === 'Active Curing Phase' ? 'bg-blue-500 animate-pulse' : 'bg-amber-550'
                     }`} />
                   </div>
 
@@ -401,19 +496,19 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                 </div>
 
                 {/* AI Progress Summary narrative block */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 flex flex-col justify-between shadow-sm">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest font-mono">Autonomous Narrative Synthesizer</span>
-                    <h4 className="text-sm font-extrabold text-white uppercase tracking-wider mt-1">Conversational AI Progress Report</h4>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest font-mono">Autonomous Narrative Synthesizer</span>
+                    <h4 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mt-1">Conversational AI Progress Report</h4>
                   </div>
                   
-                  <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 my-4 flex-1 flex items-center justify-center">
-                    <p className="text-[11px] text-slate-350 leading-relaxed font-semibold font-sans text-left">
+                  <div className="bg-slate-50 dark:bg-stone-950 border border-slate-200 dark:border-stone-850 rounded-xl p-4 my-4 flex-1 flex items-center justify-center">
+                    <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-semibold font-sans text-left">
                       {workflow.aiSummary}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                  <div className="flex items-center justify-between text-[9px] text-slate-405 dark:text-slate-500 font-bold uppercase tracking-wider">
                     <span>Model: Gemini 1.5 Flash</span>
                     <span>Confidence: 99.8%</span>
                   </div>
@@ -421,30 +516,30 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
 
               </div>
 
-              {/* Component 3: Admin Predictive Charts vs Client Timeline */}
+              {/* Admin Predictive Charts vs Client Timeline */}
               {userRole !== 'client' ? (
                 /* Admin Dashboard view: Delay Risk & Cost Variance charts */
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <h3 className="text-xs font-bold text-white uppercase tracking-widest font-mono">📊 Admin Predictive Analytics Console</h3>
-                    <span className="text-[9px] text-blue-500 font-mono font-bold">[Live telemetry feeds]</span>
+                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 space-y-6 shadow-sm">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-105 dark:border-stone-850">
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">📊 Admin Predictive Analytics Console</h3>
+                    <span className="text-[9px] text-blue-600 dark:text-blue-400 font-mono font-bold">[Live telemetry feeds]</span>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     
                     {/* Cost Variance bar chart */}
                     <div className="space-y-2 text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dynamic Cost Variance (₹ Lakhs)</p>
+                      <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Dynamic Cost Variance (₹ Lakhs)</p>
                       <div className="h-[180px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={COST_VARIANCE_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeDashoffset="0" />
                             <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '9px', fontWeight: 'bold' }} />
                             <YAxis stroke="#64748b" style={{ fontSize: '9px', fontWeight: 'bold' }} />
-                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', fontSize: '10px' }} />
+                            <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', fontSize: '10px', color: '#000' }} />
                             <Legend style={{ fontSize: '9px' }} />
                             <Bar dataKey="projected" name="Projected Budget" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="actual" name="Actual Cost" fill="#10b981" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="actual" name="Actual Cost" fill="#60a5fa" radius={[4, 4, 0, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
@@ -452,17 +547,17 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
 
                     {/* Delay Risk line chart */}
                     <div className="space-y-2 text-center">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Timeline Deviation Trend (Days)</p>
+                      <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Timeline Deviation Trend (Days)</p>
                       <div className="h-[180px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={DELAY_RISK_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                             <XAxis dataKey="week" stroke="#64748b" style={{ fontSize: '9px', fontWeight: 'bold' }} />
                             <YAxis stroke="#64748b" style={{ fontSize: '9px', fontWeight: 'bold' }} />
-                            <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', fontSize: '10px' }} />
+                            <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', fontSize: '10px', color: '#000' }} />
                             <Legend style={{ fontSize: '9px' }} />
-                            <Line type="monotone" dataKey="baseline" name="Target" stroke="#3b82f6" strokeWidth={2} activeDot={{ r: 4 }} />
-                            <Line type="monotone" dataKey="actual" name="Variance" stroke="#10b981" strokeWidth={2} />
+                            <Line type="monotone" dataKey="baseline" name="Target" stroke="#2563eb" strokeWidth={2} activeDot={{ r: 4 }} />
+                            <Line type="monotone" dataKey="actual" name="Variance" stroke="#60a5fa" strokeWidth={2} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -471,25 +566,25 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   </div>
                 </div>
               ) : (
-                /* Client view: interactive structural timeline mapping completion milestones */
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <h3 className="text-xs font-bold text-white uppercase tracking-widest font-mono">🏗️ Noida Tower A Completion Milestones</h3>
+                /* Client view: timeline completion milestones */
+                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 space-y-4 shadow-sm">
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">🏗️ Noida Tower A Completion Milestones</h3>
                   
-                  <div className="relative border-l-2 border-slate-800 pl-6 ml-4 py-4 space-y-6">
+                  <div className="relative border-l border-slate-200 dark:border-stone-800 pl-6 ml-4 py-4 space-y-6">
                     {[
-                      { title: "Foundation Casting Completed", date: "June 2026", status: "Done", icon: "✓", color: "bg-emerald-500" },
-                      { title: "4th Floor Slab Casting", date: "July 2026", status: workflow.step3State === 'completed' ? "Active Curing" : "Pending checklist", icon: "🏗️", color: workflow.step3State === 'completed' ? "bg-blue-600 animate-pulse" : "bg-slate-700" },
-                      { title: "MEP Installations & HVAC", date: "October 2026", status: "Scheduled", icon: "⚡", color: "bg-slate-800" },
-                      { title: "Finishing & Handover", date: "December 2026", status: "Scheduled", icon: "🔑", color: "bg-slate-800" }
+                      { title: "Foundation Casting Completed", date: "June 2026", status: "Done", icon: "✓", color: "bg-blue-600" },
+                      { title: "4th Floor Slab Casting", date: "July 2026", status: workflow.step3State === 'completed' ? "Active Curing" : "Pending checklist", icon: "🏗️", color: workflow.step3State === 'completed' ? "bg-blue-505 animate-pulse" : "bg-slate-400" },
+                      { title: "MEP Installations & HVAC", date: "October 2026", status: "Scheduled", icon: "⚡", color: "bg-slate-300" },
+                      { title: "Finishing & Handover", date: "December 2026", status: "Scheduled", icon: "🔑", color: "bg-slate-300" }
                     ].map((step, idx) => (
                       <div key={idx} className="relative text-left">
                         {/* Timeline Bullet */}
-                        <div className={`absolute -left-9 top-0.5 w-6 h-6 rounded-full ${step.color} border-4 border-slate-900 flex items-center justify-center text-[9px] font-black text-white`}>
+                        <div className={`absolute -left-9 top-0.5 w-6 h-6 rounded-full ${step.color} border border-white dark:border-stone-900 flex items-center justify-center text-[9px] font-black text-white`}>
                           {step.icon}
                         </div>
                         <div>
-                          <p className="text-xs font-bold text-white leading-none">{step.title}</p>
-                          <p className="text-[10px] text-slate-400 mt-1 font-semibold">{step.date} · Status: <span className="font-bold text-blue-450">{step.status}</span></p>
+                          <p className="text-xs font-bold text-slate-900 dark:text-white leading-none">{step.title}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-semibold">{step.date} · Status: <span className="font-bold text-blue-600 dark:text-blue-400">{step.status}</span></p>
                         </div>
                       </div>
                     ))}
@@ -499,24 +594,24 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
 
             </div>
 
-            {/* Right Side: Digital Vault & Alert streams (lg:col-span-4) */}
+            {/* Right Side: Digital Vault & Alert streams */}
             <div className="lg:col-span-4 space-y-6">
               
               {/* Document Compliance Vault */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                <h3 className="text-xs font-bold text-white uppercase tracking-widest font-mono">📁 Digital Compliance Vault</h3>
-                <p className="text-[10px] text-slate-400 font-semibold">Ledger-secured records generated programmatically by workflow actions.</p>
+              <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 space-y-4 shadow-sm">
+                <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">📁 Digital Compliance Vault</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Ledger-secured records generated programmatically by workflow actions.</p>
                 
                 <div className="space-y-2 max-h-[220px] overflow-y-auto scrollbar-hide">
                   {workflow.documents.map((doc) => (
-                    <div key={doc.id} className="p-3 bg-slate-950 border border-slate-805 rounded-xl flex items-center justify-between">
+                    <div key={doc.id} className="p-3 bg-slate-50 dark:bg-stone-950 border border-slate-105 dark:border-stone-850 rounded-xl flex items-center justify-between">
                       <div className="text-left">
-                        <p className="text-xs font-bold text-white leading-tight">{doc.title}</p>
-                        <p className="text-[9px] text-slate-500 font-semibold uppercase mt-0.5">{doc.type} · Issued {doc.date}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{doc.title}</p>
+                        <p className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold uppercase mt-0.5">{doc.type} · Issued {doc.date}</p>
                       </div>
                       <button
                         onClick={() => alert(`Downloading RERA ledger file ${doc.id} PDF...`)}
-                        className="text-[9px] font-bold bg-slate-850 hover:bg-slate-800 text-slate-300 border border-slate-750 px-2 py-1 rounded"
+                        className="text-[9px] font-bold bg-white dark:bg-stone-800 hover:bg-slate-100 dark:hover:bg-stone-750 text-slate-700 dark:text-stone-300 border border-slate-200 dark:border-stone-750 px-2 py-1 rounded"
                       >
                         PDF
                       </button>
@@ -526,20 +621,20 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
               </div>
 
               {/* Alert logs stream */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                  <h3 className="text-xs font-bold text-white uppercase tracking-widest font-mono">🔔 Live Alert Stream</h3>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 space-y-4 shadow-sm">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-105 dark:border-stone-850">
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">🔔 Live Alert Stream</h3>
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
                 </div>
 
                 <div className="space-y-3 max-h-[200px] overflow-y-auto scrollbar-hide">
                   {clientAlerts.map((alert) => (
-                    <div key={alert.id} className="text-left space-y-0.5 pb-2 border-b border-slate-850 last:border-0">
-                      <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-bold font-mono">
+                    <div key={alert.id} className="text-left space-y-0.5 pb-2 border-b border-slate-105 dark:border-stone-850 last:border-0">
+                      <div className="flex items-center gap-1.5 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-mono">
                         <span>[{alert.time}]</span>
-                        <span className="text-blue-500">SYSTEM_ALERT</span>
+                        <span className="text-blue-600 dark:text-blue-400">SYSTEM_ALERT</span>
                       </div>
-                      <p className="text-[11px] text-slate-300 leading-normal font-semibold pl-1">
+                      <p className="text-[11px] text-slate-650 dark:text-slate-300 leading-normal font-semibold pl-1">
                         {alert.msg}
                       </p>
                     </div>

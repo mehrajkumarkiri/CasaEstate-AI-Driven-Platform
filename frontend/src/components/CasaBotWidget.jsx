@@ -7,7 +7,7 @@ export default function CasaBotWidget() {
   const [messages, setMessages] = useState([
     {
       sender: 'bot',
-      text: "Hello! I am CasaBot, your intelligent Construction & Project Copilot. How can I help you inspect structural progress or calculate timelines today?",
+      text: "Hello! I am CasaBot, your intelligent Construction & Project Copilot. I can answer ANY questions (coding, calculations, general queries) using Gemini AI. How can I help you today?",
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -37,7 +37,6 @@ export default function CasaBotWidget() {
     setLoading(true);
 
     try {
-      // Fetch response from serverless backend endpoint
       const response = await fetch('/api/v1/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,8 +83,32 @@ export default function CasaBotWidget() {
   const chips = [
     "Predict Delay Risks",
     "Tower A Cost Audit",
-    "Show RERA License"
+    "Show RERA License",
+    "Write a quick python script"
   ];
+
+  // Helper to format messages with simple code block styling
+  const renderMessageText = (text) => {
+    if (text.includes('```')) {
+      const parts = text.split('```');
+      return parts.map((part, index) => {
+        if (index % 2 === 1) {
+          // It's a code block
+          const lines = part.trim().split('\n');
+          const lang = lines[0].length < 10 ? lines[0] : '';
+          const code = lang ? lines.slice(1).join('\n') : lines.join('\n');
+          return (
+            <pre key={index} className="bg-slate-900 text-emerald-400 p-3 rounded-lg overflow-x-auto my-2 font-mono text-[10px] text-left">
+              {lang && <span className="text-[8px] text-slate-500 uppercase block mb-1">{lang}</span>}
+              <code>{code}</code>
+            </pre>
+          );
+        }
+        return <p key={index} className="whitespace-pre-line">{part}</p>;
+      });
+    }
+    return <p className="whitespace-pre-line">{text}</p>;
+  };
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] text-left">
@@ -117,21 +140,23 @@ export default function CasaBotWidget() {
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-sm font-bold relative">
                 🤖
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border border-slate-900 rounded-full animate-ping" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border border-slate-900 rounded-full" />
               </div>
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider leading-none">CasaBot Copilot</h4>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">AI Engine active</p>
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Gemini AI Integrated</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-slate-400 hover:text-white transition-colors p-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-slate-400 hover:text-white transition-colors p-1"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Messages Scroll Area */}
@@ -143,12 +168,12 @@ export default function CasaBotWidget() {
               const isBot = m.sender === 'bot';
               return (
                 <div key={i} className={`flex ${isBot ? 'justify-start' : 'justify-end'}`}>
-                  <div className={`max-w-[80%] rounded-2xl p-3 text-xs leading-relaxed shadow-sm ${
+                  <div className={`max-w-[90%] rounded-2xl p-3 text-xs leading-relaxed shadow-sm ${
                     isBot
-                      ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 border border-slate-100 dark:border-slate-800/80 rounded-tl-none'
+                      ? 'bg-white dark:bg-slate-800 text-slate-855 dark:text-slate-100 border border-slate-100 dark:border-slate-800/80 rounded-tl-none'
                       : 'bg-blue-600 text-white rounded-tr-none'
                   }`}>
-                    <p className="font-semibold">{m.text}</p>
+                    <div className="font-semibold">{renderMessageText(m.text)}</div>
                     <span className={`block text-[8px] mt-1 text-right ${isBot ? 'text-slate-400' : 'text-blue-200'}`}>
                       {m.time}
                     </span>
@@ -174,7 +199,7 @@ export default function CasaBotWidget() {
               <button
                 key={c}
                 onClick={() => handleSendMessage(c)}
-                className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[10px] font-bold text-slate-650 dark:text-slate-350 border border-slate-205 dark:border-slate-750 px-2.5 py-1 rounded-full whitespace-nowrap transition-colors"
+                className="bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[10px] font-bold text-slate-650 dark:text-slate-355 border border-slate-205 dark:border-slate-755 px-2.5 py-1 rounded-full whitespace-nowrap transition-colors"
               >
                 {c}
               </button>
@@ -185,11 +210,11 @@ export default function CasaBotWidget() {
           <div className="p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2">
             <input
               type="text"
-              placeholder="Ask CasaBot about delays, RERA..."
+              placeholder="Ask anything, e.g. delay risk, write a script..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-slate-800 dark:text-white placeholder-slate-450 text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-slate-800 dark:text-white placeholder-slate-400 text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"
             />
             <button
               onClick={() => handleSendMessage()}

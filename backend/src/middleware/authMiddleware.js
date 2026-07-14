@@ -8,7 +8,7 @@ const authenticate = (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'aura-estates-super-secret-jwt-key-2026');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'casa-estate-super-secret-jwt-key-2026');
     req.user = decoded;
     next();
   } catch (error) {

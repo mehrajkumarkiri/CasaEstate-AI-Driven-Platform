@@ -135,11 +135,15 @@ export default function Login() {
 
       if (res.success) {
         setStep(2);
+        let msg = `A 6-digit verification code has been sent directly to ${targetInput}. Please check your inbox.`;
+        if (res.otp) {
+          msg += ` [SIMULATOR] Your verification code is: ${res.otp}`;
+        }
         pushNotification({
           type: 'success',
           title: '🔑 Verification Code Dispatched',
-          message: `A 6-digit verification code has been sent directly to ${targetInput}. Please check your inbox.`,
-          duration: 10000
+          message: msg,
+          duration: 12000
         });
       } else {
         setError(res.error || 'Could not send verification code.');
@@ -233,39 +237,7 @@ export default function Login() {
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
         <div className="bg-white dark:bg-stone-900 py-8 px-4 shadow-md border border-slate-205 dark:border-stone-800 rounded-2xl sm:px-10 text-left">
           
-          {/* Segmented Control for Persona Access */}
-          {step === 1 && (
-            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-stone-850 rounded-xl mb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('buyer');
-                  navigate('/login?role=buyer', { replace: true });
-                }}
-                className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                  activeTab === 'buyer'
-                    ? 'bg-white dark:bg-stone-800 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-stone-400 dark:hover:text-stone-200'
-                }`}
-              >
-                🏢 Buyer Lounge
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('resident');
-                  navigate('/login?role=resident', { replace: true });
-                }}
-                className={`py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                  activeTab === 'resident'
-                    ? 'bg-white dark:bg-stone-800 text-slate-900 dark:text-white shadow-xs'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-stone-400 dark:hover:text-stone-200'
-                }`}
-              >
-                🏠 Resident Portal
-              </button>
-            </div>
-          )}
+
 
           {error && (
             <div className="mb-4 bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-3 rounded-r-xl">

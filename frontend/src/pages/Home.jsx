@@ -1,13 +1,69 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import BookingForm from '../components/BookingForm';
+import ProjectCard from '../components/ProjectCard';
+import AIVoiceChatSimulator from '../components/AIVoiceChatSimulator';
 import { useApp } from '../context/AppContext';
+import { projectsApi } from '../services/api';
+
+const MOCK_PROJECTS = [
+  {
+    _id: 'proj-001',
+    name: 'Casa Horizon',
+    tagline: 'Modern High-Rise Living',
+    location: { address: 'Sector 74, Noida' },
+    priceRange: { min: 8500000 },
+    status: 'Under Construction',
+    reraNumber: 'UP-RERA-2026-REG-88209',
+    totalTowers: 3,
+    totalFloors: 24,
+    totalUnits: 144,
+    salesData: { soldUnits: 82 }
+  },
+  {
+    _id: 'proj-002',
+    name: 'Casa Serenity',
+    tagline: 'Eco-Luxury Green Villas',
+    location: { address: 'Sector 48, Gurugram' },
+    priceRange: { min: 12000000 },
+    status: 'Ready to Move',
+    reraNumber: 'HR-RERA-2026-REG-74011',
+    totalTowers: 1,
+    totalFloors: 3,
+    totalUnits: 28,
+    salesData: { soldUnits: 28 }
+  },
+  {
+    _id: 'proj-003',
+    name: 'Casa Pinnacle',
+    tagline: 'Super-Luxury Sky Mansions',
+    location: { address: 'Worli, Mumbai' },
+    priceRange: { min: 48000000 },
+    status: 'Under Construction',
+    reraNumber: 'MH-RERA-2026-REG-10925',
+    totalTowers: 2,
+    totalFloors: 60,
+    totalUnits: 80,
+    salesData: { soldUnits: 12 }
+  }
+];
 
 export default function Home() {
-  const { theme, toggleTheme } = useApp();
+  const { theme, toggleTheme, pushNotification, logout } = useApp();
   const navigate = useNavigate();
 
-  // Carousel data mock matching the reference image layout
+  // Role Gate & Passcode States
+  const [showRoleGate, setShowRoleGate] = useState(false);
+  const [gateMode, setGateMode] = useState('choose'); // 'choose' | 'passcode'
+  const [targetGateRole, setTargetGateRole] = useState(null); // 'admin' | 'engineer'
+  const [passcode, setPasscode] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
+
+  // Client Property Search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [projectList, setProjectList] = useState(MOCK_PROJECTS);
+
+  // Carousel data mock
   const carouselItems = [
     {
       completion: 'Q4 2026',
@@ -90,54 +146,116 @@ export default function Home() {
   const [footerModal, setFooterModal] = useState({ open: false, title: '', content: '' });
   const [activeFaq, setActiveFaq] = useState(null);
 
+
+
+  // Fetch real project data
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const res = await projectsApi.getAll();
+        if (res.success && res.data && res.data.length > 0) {
+          setProjectList(res.data);
+        }
+      } catch (err) {
+        console.warn("Failed to load backend projects, using static fallback:", err);
+      }
+    };
+    fetchProjects();
+  }, []);
+
+  // Role selections handlers
+  const selectClient = () => {
+    localStorage.setItem('casa_role_selection', 'client');
+    setShowRoleGate(false);
+    pushNotification({
+      type: 'success',
+      title: '💎 Portal Selected',
+      message: 'Logged in as Client. You can now browse properties & simulate AI tools.'
+    });
+  };
+
+  const selectResident = () => {
+    localStorage.setItem('casa_role_selection', 'resident');
+    setShowRoleGate(false);
+    navigate('/login?role=resident');
+  };
+
+  const triggerPasscodePrompt = (role) => {
+    setTargetGateRole(role);
+    setGateMode('passcode');
+    setPasscode('');
+    setPasscodeError('');
+  };
+
+  const handlePasscodeSubmit = () => {
+    const targetPass = targetGateRole === 'admin' ? 'admin123' : 'engineer123';
+    if (passcode === targetPass) {
+      localStorage.setItem('casa_role_selection', targetGateRole);
+      
+      // Auto-authenticate mock session
+      logout(); // Clear any existing session
+      const mockUser = targetGateRole === 'admin' 
+        ? { id: 'user-admin-001', name: 'CasaEstate Admin', email: 'admin@casaestate.com', role: 'admin' }
+        : { id: 'user-engineer-001', name: 'Field Site Engineer', email: 'engineer@casaestate.com', role: 'engineer' };
+        
+      localStorage.setItem('aura_token', `mock-${targetGateRole}-session-key-9988`);
+      localStorage.setItem('aura_user', JSON.stringify(mockUser));
+      
+      setShowRoleGate(false);
+      pushNotification({
+        type: 'success',
+        title: '🔒 Authenticated',
+        message: `Bypassed role checks for ${targetGateRole.toUpperCase()}. Session established.`
+      });
+
+      if (targetGateRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/engineer');
+      }
+    } else {
+      setPasscodeError(`Invalid passcode. Use '${targetPass}' for this evaluation.`);
+    }
+  };
+
+  // Filter projects based on query
+  const filteredProjects = projectList.filter((proj) =>
+    proj.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    proj.location?.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    proj.status.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="bg-[#f4f4f3] dark:bg-stone-950 text-stone-900 dark:text-white transition-colors duration-350 flex flex-col min-h-screen">
       
-      {/* 🏙️ Same-to-Same Hero Section matching Reference Image */}
+      {/* 🏙️ Same-to-Same Hero Section */}
       <section className="relative w-full h-[72vh] md:h-[82vh] bg-cover bg-center overflow-hidden flex flex-col justify-between"
         style={{ backgroundImage: `url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=80')` }}
       >
         {/* Sky / Top dark gradient protection overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/35 pointer-events-none" />
 
-
-
         {/* Center Massive Tall Condensed Title Overlay */}
         <div className="relative z-10 w-full text-center flex-1 flex items-center justify-center">
-          <h1 className="text-white text-[12vw] tracking-wider select-none font-bold text-huge leading-none opacity-95">
-            CASAESTATE
-          </h1>
+          <div className="space-y-4">
+            <h1 className="text-white text-[10vw] tracking-wider select-none font-bold text-huge leading-none opacity-95">
+              CASAESTATE
+            </h1>
+            <p className="text-white/90 text-xs sm:text-sm font-black uppercase tracking-widest bg-black/30 backdrop-blur-md py-2 px-6 rounded-full inline-block border border-white/10 shadow-lg">
+              🤖 Autonomous Multi-Agent Swarms & Construction Copilot
+            </p>
+          </div>
         </div>
 
-        {/* Bottom Hero Strip: Slogan (Left) & Theme Selector (Right) */}
+        {/* Bottom Hero Strip */}
         <div className="relative z-10 w-full px-6 md:px-12 pb-8 flex flex-col md:flex-row items-start md:items-end justify-between gap-4 text-left">
           <p className="max-w-md text-[11px] font-bold text-white/80 leading-relaxed uppercase tracking-wider">
-            A vision that transcends property and space, where unmatched craftsmanship inspires elegance and innovation to enrich lives.
+            Revisiting real estate management through B2B negotiation algorithms, concrete curing telemetry, and automated compliance ledgers.
           </p>
-
-          {/* Theme switcher pill matching reference layout */}
-          <div className="flex bg-white/95 dark:bg-stone-900 border border-slate-205 dark:border-stone-800 rounded-full p-1 shadow-md">
-            <button
-              onClick={() => { if (theme !== 'light') toggleTheme(); }}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition-all ${
-                theme === 'light' ? 'bg-slate-900 text-white' : 'text-stone-400 hover:text-stone-200'
-              }`}
-            >
-              ☀️
-            </button>
-            <button
-              onClick={() => { if (theme !== 'dark') toggleTheme(); }}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition-all ${
-                theme === 'dark' ? 'bg-white text-stone-950' : 'text-slate-550 hover:text-slate-905'
-              }`}
-            >
-              🌙
-            </button>
-          </div>
         </div>
       </section>
 
-      {/* 📐 Bottom Split-Screen Module matching Reference Image */}
+      {/* 📐 Bottom Split-Screen Module */}
       <section className="w-full grid grid-cols-1 md:grid-cols-12 border-b border-slate-205 dark:border-stone-800">
         
         {/* Left Side (Black bg): Architectural floor plan drawing */}
@@ -148,10 +266,9 @@ export default function Home() {
           </svg>
         </div>
 
-        {/* Right Side (Off-white/Stone bg): Metrics & Carousel */}
+        {/* Right Side (Off-white/Stone bg) */}
         <div className="md:col-span-7 bg-[#f4f4f3] dark:bg-stone-900 p-8 sm:p-10 flex flex-col justify-between text-left border-t md:border-t-0 border-slate-205 dark:border-stone-850">
           
-          {/* Row of Metrics */}
           <div className="grid grid-cols-3 gap-4 pb-6 border-b border-slate-200 dark:border-stone-800">
             <div>
               <p className="text-[10px] text-slate-400 dark:text-stone-500 font-bold uppercase tracking-wider">Completion:</p>
@@ -167,10 +284,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Carousel footer buttons and preview thumbnails */}
           <div className="pt-6 flex items-center justify-between flex-wrap gap-4">
-            
-            {/* Arrows */}
             <div className="flex gap-2">
               <button 
                 onClick={handlePrev}
@@ -186,7 +300,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Thumbnail details */}
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="text-xs font-bold text-slate-800 dark:text-stone-200">{cur.type}</p>
@@ -197,19 +310,20 @@ export default function Home() {
                 <img src={cur.photo2} alt="render 2" className="w-8 h-8 rounded-full border border-white dark:border-stone-800 object-cover" />
               </div>
             </div>
-
           </div>
 
         </div>
       </section>
+
+
 
       {/* 👥 Segregated Operational Hub */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-stone-900 text-left border-b border-slate-205 dark:border-stone-800">
         <div className="max-w-7xl mx-auto">
           <div className="mb-10 text-center sm:text-left">
             <p className="text-xs font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest mb-1">OPERATIONAL CHANNELS</p>
-            <h2 className="section-title">Select Your Desired Path</h2>
-            <p className="section-subtitle">Exposing clear access points tailored for buyers, active tower residents, and internal staff.</p>
+            <h2 className="text-2xl font-black uppercase tracking-wider text-slate-900 dark:text-white mt-1">Access Command Gateways</h2>
+            <p className="text-xs text-slate-500 dark:text-stone-400 mt-1">Exposing secure entry nodes mapped to distinct builder administrative segments.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -224,9 +338,9 @@ export default function Home() {
                 Browse our registered premium towers, inspect carpet layouts, download government sanction files, and lock digital allotments instantly.
               </p>
               <div className="pt-2">
-                <Link to="/deals" className="inline-block text-xs font-extrabold text-slate-950 dark:text-white hover:underline uppercase tracking-wider">
+                <button onClick={selectClient} className="inline-block text-xs font-extrabold text-slate-950 dark:text-white hover:underline uppercase tracking-wider">
                   Explore Deals Room →
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -240,9 +354,9 @@ export default function Home() {
                 Log maintenance grievances, view upcoming society notice boards, clear monthly electricity bills, and register gate pass codes for visitors.
               </p>
               <div className="pt-2">
-                <Link to="/login?role=resident" className="inline-block text-xs font-extrabold text-slate-950 dark:text-white hover:underline uppercase tracking-wider">
+                <button onClick={selectResident} className="inline-block text-xs font-extrabold text-slate-950 dark:text-white hover:underline uppercase tracking-wider">
                   Enter Resident Space →
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -251,14 +365,17 @@ export default function Home() {
               <div className="w-10 h-10 rounded-xl bg-slate-900 text-white dark:bg-stone-100 dark:text-stone-900 flex items-center justify-center text-lg">
                 📊
               </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Legal Staff & Admins</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white uppercase tracking-wider">Administrative Swarms</h3>
               <p className="text-xs text-slate-600 dark:text-stone-300 leading-relaxed font-semibold">
                 Verify provisional unit booking allocations, clear transaction audit ledgers, review society saturation metrics, and authorize RERA files.
               </p>
-              <div className="pt-2">
-                <Link to="/login?role=admin" className="inline-block text-xs font-extrabold text-slate-950 dark:text-white hover:underline uppercase tracking-wider">
-                  Access Admin Cockpit →
-                </Link>
+              <div className="pt-2 flex gap-4">
+                <button onClick={() => triggerPasscodePrompt('admin')} className="text-xs font-extrabold text-slate-950 dark:text-white hover:underline uppercase tracking-wider">
+                  Admin Cockpit →
+                </button>
+                <button onClick={() => triggerPasscodePrompt('engineer')} className="text-xs font-extrabold text-slate-950 dark:text-white hover:underline uppercase tracking-wider">
+                  Engineer Desk →
+                </button>
               </div>
             </div>
 
@@ -271,8 +388,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="mb-10 text-center sm:text-left">
             <p className="text-xs font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest mb-1">SECURITY & ASSURANCE</p>
-            <h2 className="section-title">Emergency Safety Directory</h2>
-            <p className="section-subtitle">Access critical numbers, fire evacuation plans, and guard marshals instantly.</p>
+            <h2 className="text-2xl font-black uppercase tracking-wider text-slate-900 dark:text-white mt-1">Emergency Safety Directory</h2>
+            <p className="text-xs text-slate-550 dark:text-slate-400 mt-1">Access critical numbers, fire evacuation plans, and guard marshals instantly.</p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -280,7 +397,7 @@ export default function Home() {
             <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 p-5 rounded-2xl">
               <span className="text-2xl block mb-2">🔥</span>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">Fire Desk Marshal</h4>
-              <p className="text-xs text-slate-500 dark:text-stone-400">Assigned Fire safety officer</p>
+              <p className="text-xs text-slate-550 dark:text-stone-400">Assigned Fire safety officer</p>
               <a href="tel:+91-9999988811" className="block text-xs font-bold text-blue-600 dark:text-blue-400 mt-2 hover:underline">
                 +91-9999988811
               </a>
@@ -289,7 +406,7 @@ export default function Home() {
             <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 p-5 rounded-2xl">
               <span className="text-2xl block mb-2">🏢</span>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">Tower A Guard Desk</h4>
-              <p className="text-xs text-slate-500 dark:text-stone-400">Gate security desk intercom</p>
+              <p className="text-xs text-slate-550 dark:text-stone-400">Gate security desk intercom</p>
               <p className="text-xs font-bold text-slate-800 dark:text-stone-200 mt-2">
                 Extension: 101
               </p>
@@ -298,7 +415,7 @@ export default function Home() {
             <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 p-5 rounded-2xl">
               <span className="text-2xl block mb-2">🏢</span>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">Tower B Guard Desk</h4>
-              <p className="text-xs text-slate-500 dark:text-stone-400">Gate security desk intercom</p>
+              <p className="text-xs text-slate-550 dark:text-stone-400">Gate security desk intercom</p>
               <p className="text-xs font-bold text-slate-800 dark:text-stone-200 mt-2">
                 Extension: 102
               </p>
@@ -307,7 +424,7 @@ export default function Home() {
             <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 p-5 rounded-2xl">
               <span className="text-2xl block mb-2">🚨</span>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1">Builder Safety Escalation</h4>
-              <p className="text-xs text-slate-500 dark:text-stone-400">24/7 Security escalation helpline</p>
+              <p className="text-xs text-slate-550 dark:text-stone-400">24/7 Security escalation helpline</p>
               <a href="tel:+91-120-6677889" className="block text-xs font-bold text-blue-600 dark:text-blue-400 mt-2 hover:underline">
                 +91-120-6677889
               </a>
@@ -329,43 +446,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Corporate Grievance & Legal Disclosures */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-slate-205 dark:border-stone-800 bg-white dark:bg-stone-900 text-left">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-5 space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Corporate Headquarters</h3>
-            <p className="text-xs text-slate-600 dark:text-stone-400 leading-relaxed font-semibold">
-              CasaEstate Infrastructure Private Limited<br />
-              Corporate Tower B, 14th Floor, Sector 62,<br />
-              Noida, Uttar Pradesh, 201301, India.
-            </p>
-            <p className="text-xs text-slate-600 dark:text-stone-400 font-semibold">
-              <span className="font-bold text-slate-800 dark:text-stone-300">CIN:</span> U45201UP2026PTC123456<br />
-              <span className="font-bold text-slate-800 dark:text-stone-300">Support:</span> support@casaestate.com<br />
-              <span className="font-bold text-slate-800 dark:text-stone-300">Helpline:</span> +91-120-6677889
-            </p>
-          </div>
-          <div className="lg:col-span-7 space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Nodal Grievance Officer</h3>
-            <p className="text-xs text-slate-600 dark:text-stone-400 leading-relaxed font-semibold">
-              In accordance with real estate regulatory norms, for any escalation regarding allotment delays or facility issues, you can file a ticket or contact our designated officer:
-            </p>
-            <p className="text-xs text-slate-600 dark:text-stone-400 font-semibold">
-              <span className="font-bold text-slate-800 dark:text-stone-300">Name:</span> Ms. Shalini Sharma (Nodal Grievance Officer)<br />
-              <span className="font-bold text-slate-800 dark:text-stone-300">Email:</span> shalini.sharma@casaestate.com<br />
-              <span className="font-bold text-slate-800 dark:text-stone-300">Redressal Timeline:</span> Under 48 Business Hours
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* FAQ Accordion Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-805">
         <div className="max-w-3xl mx-auto text-left">
           <div className="text-center mb-10">
             <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest font-mono">FAQ Desk</span>
             <h2 className="text-2xl font-extrabold uppercase font-display tracking-tight text-slate-900 dark:text-white mt-1">Frequently Asked Questions</h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">Find instant resolutions regarding allotments, predictive construction timelines, and compliance standards.</p>
+            <p className="text-xs text-slate-550 dark:text-slate-400 mt-2 font-medium">Find instant resolutions regarding allotments, predictive construction timelines, and compliance standards.</p>
           </div>
 
           <div className="space-y-4">
@@ -410,19 +497,98 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-205 dark:border-stone-800 bg-[#f4f4f3] dark:bg-stone-955 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500 dark:text-stone-400">
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <span className="font-bold">
+      {/* 💎 PREMIUM MODERN UPGRADED FOOTER */}
+      <footer className="border-t border-slate-205 dark:border-stone-850 bg-[#e4e4e2] dark:bg-stone-950 py-16 px-4 sm:px-6 lg:px-8 text-left transition-colors">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 text-xs text-slate-600 dark:text-stone-400">
+          
+          {/* Col 1: Platform Core Info */}
+          <div className="space-y-4">
+            <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1">
               <span className="text-[#c06014]">Casa</span>
-              <span className="text-[#4a4a4a] dark:text-[#d4d4d8]">Estate</span> Infrastructure
+              <span className="text-[#4a4a4a] dark:text-[#d4d4d8]">Estate</span> AI
             </span>
-            <span className="hidden sm:inline">·</span>
-            <span>© 2026 CasaEstate Pvt. Ltd. All rights reserved.</span>
+            <p className="leading-relaxed font-semibold">
+              An autonomous real estate operations infrastructure built to streamline B2B wholesale deals, run automated multi-agent inspections, and persistence ledgers.
+            </p>
+            <p className="text-[10px] text-slate-550 dark:text-stone-500 font-bold uppercase">
+              Powered by Google Gemini AI Engine
+            </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link to="/login" className="hover:underline hover:text-slate-900 dark:hover:text-white">Legal Agreement</Link>
+
+          {/* Col 2: Operational Hubs */}
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white">Access Portals</h4>
+            <ul className="space-y-2.5 font-semibold">
+              <li>
+                <button onClick={selectClient} className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  Potential Buyer Portfolio
+                </button>
+              </li>
+              <li>
+                <button onClick={selectResident} className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  Active Resident Lounge
+                </button>
+              </li>
+              <li>
+                <button onClick={() => triggerPasscodePrompt('admin')} className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  Administrative Cockpit
+                </button>
+              </li>
+              <li>
+                <button onClick={() => triggerPasscodePrompt('engineer')} className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  Site Engineer Desk
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 3: AI Feature Directory */}
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white">AI Core Services</h4>
+            <ul className="space-y-2.5 font-semibold">
+              <li>
+                <Link to="/dashboard" className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  Workflow Swarm Console
+                </Link>
+              </li>
+              <li>
+                <Link to="/deals" className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  B2B Negotiation Desk
+                </Link>
+              </li>
+              <li>
+                <a href="#" onClick={(e) => { e.preventDefault(); pushNotification({ type: 'info', title: 'AI Copilot Active', message: 'Click the robot icon on the bottom right to start chatting.' }); }} className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  CasaBot Gemini Assistant
+                </a>
+              </li>
+              <li>
+                <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: document.body.scrollHeight / 2.3, behavior: 'smooth' }); }} className="hover:underline hover:text-slate-900 dark:hover:text-white">
+                  AI Call & Chat Simulator
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 4: Corporate & RERA Compliance */}
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white">Corporate Compliance</h4>
+            <p className="leading-relaxed font-semibold">
+              CasaEstate Infrastructure Private Limited<br />
+              CIN: U45201UP2026PTC123456<br />
+              Noida Sector 62, Uttar Pradesh, 201301.
+            </p>
+            <p className="leading-relaxed font-semibold">
+              Support: support@casaestate.com<br />
+              Escalations: shalini.sharma@casaestate.com
+            </p>
+          </div>
+
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="max-w-7xl mx-auto mt-12 pt-8 border-t border-slate-350 dark:border-stone-850 flex flex-col sm:flex-row items-center justify-between gap-6 text-[10px] text-slate-500 dark:text-stone-500 font-bold uppercase tracking-wider">
+          <div className="flex flex-wrap items-center gap-4">
+            <span>© 2026 CasaEstate Pvt. Ltd. All rights reserved.</span>
             <span>·</span>
             <a 
               href="#" 
@@ -431,7 +597,7 @@ export default function Home() {
                 setFooterModal({
                   open: true,
                   title: 'Terms of Use',
-                  content: 'CASAESTATE TERMS OF USE:\n\n1. Authenticity of Listings: All units, scarcities, prices and RERA certifications displayed on this platform are synchronized in real time with our central ledger database.\n2. B2B Margin Protocols: Bulk wholesaling negotiation contracts proposed via the Enterprise Wholesale Desk are evaluated strictly using our margins algorithms based on stock availability and Scarcity Indexes.\n3. Allotment Locks: Provisional locks reserved by the Allotment Wizard hold the designated unit for 10 minutes, after which it is released back to public availability automatically.'
+                  content: 'CASAESTATE TERMS OF USE:\n\n1. Listing Verification: All scarcities and RERA registration states displayed are synced instantly with central builder vaults.\n2. Concurrency: Live slot allocations verify capacity boundaries atomically on each check.\n3. Security: Custom API keys are persisted strictly in user-owned local storage configurations.'
                 });
               }}
               className="hover:underline hover:text-slate-900 dark:hover:text-white"
@@ -446,7 +612,7 @@ export default function Home() {
                 setFooterModal({
                   open: true,
                   title: 'Privacy Policy',
-                  content: 'CASAESTATE PRIVACY POLICY:\n\n1. Data Integrity: All booking information, user identities, contact emails, and mobile phone numbers verified during OTP sessions are saved securely under corporate database collections.\n2. Ledgers Auditing: Every confirmed reservation transaction logs metadata to the immutable ledger record, guaranteeing complete legal auditing and protection against double-allocations.\n3. Communication Consent: We only use your primary phone number and notification email for deed delivery, RERA sanctions updates, and regular society drill reminders.'
+                  content: 'CASAESTATE PRIVACY POLICY:\n\n1. Data Privacy: Session telemetry is securely preserved under standard corporate guidelines.\n2. Ledgers: Final contract entries log transaction metadata to the immutable ledger index guaranteeing double-allocation protection.'
                 });
               }}
               className="hover:underline hover:text-slate-900 dark:hover:text-white"
@@ -460,14 +626,17 @@ export default function Home() {
                 e.preventDefault();
                 setFooterModal({
                   open: true,
-                  title: 'RERA Sanction Documents',
+                  title: 'RERA Compliance Documents',
                   content: 'CASAESTATE RERA COMPLIANCE STATUS:\n\nAll real estate developments under CasaEstate Infrastructure Pvt. Ltd. are fully approved by the Real Estate Regulatory Authority (RERA):\n\n- Casa Horizon (Noida): UP-RERA-2026-REG-88209\n- Casa Serenity (Gurugram): HR-RERA-2026-REG-74011\n- Casa Pinnacle (Mumbai): MH-RERA-2026-REG-10925\n\nAll construction blueprints, fire NOC evacuation maps, and structural layouts are legally sanctioned and approved for allotment.'
                 });
               }}
               className="hover:underline hover:text-slate-900 dark:hover:text-white"
             >
-              RERA Sanction Documents
+              RERA Sanctions
             </a>
+          </div>
+          <div>
+            <span>Engineered with Antigravity AI Engine</span>
           </div>
         </div>
       </footer>
@@ -493,23 +662,20 @@ export default function Home() {
             <div className="bg-black border border-stone-800 rounded-2xl p-6 aspect-[4/3] flex items-center justify-center relative">
               <div className="absolute inset-0 bg-grid opacity-5" />
               <svg viewBox="0 0 120 80" className="w-full h-full text-emerald-500 stroke-current" fill="none" strokeWidth="0.8">
-                {/* Structural escape lanes layout */}
                 <rect x="5" y="5" width="110" height="70" rx="2" />
                 <line x1="30" y1="5" x2="30" y2="75" />
                 <line x1="90" y1="5" x2="90" y2="75" />
                 <line x1="30" y1="40" x2="90" y2="40" />
-                {/* Stair cores escape zones */}
+                
                 <rect x="12" y="32" width="12" height="16" className="text-red-500" />
                 <text x="14" y="42" className="fill-current text-red-500 stroke-none text-[4px] font-sans font-bold">STAIR A</text>
                 
                 <rect x="96" y="32" width="12" height="16" className="text-red-500" />
                 <text x="98" y="42" className="fill-current text-red-500 stroke-none text-[4px] font-sans font-bold">STAIR B</text>
                 
-                {/* Evacuation Arrows */}
                 <path d="M 40 40 L 32 40" strokeWidth="1" className="text-emerald-500" markerEnd="url(#arrow)" />
                 <path d="M 80 40 L 88 40" strokeWidth="1" className="text-emerald-500" markerEnd="url(#arrow)" />
                 
-                {/* Arrow markers */}
                 <defs>
                   <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                     <path d="M 0 0 L 10 5 L 0 10 z" className="fill-current" />
@@ -569,6 +735,8 @@ export default function Home() {
           </div>
         </div>
       )}
+
+
 
       {/* Global Allotment Drawer */}
       <BookingForm />

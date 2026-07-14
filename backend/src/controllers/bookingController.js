@@ -12,14 +12,21 @@ const isDBConnected = () => mongoose.connection.readyState === 1;
 
 // GET /api/v1/bookings
 exports.getBookings = asyncWrapper(async (req, res) => {
+  const user = req.user;
   const { userId, status, bookingType } = req.query;
+  
+  let targetUserId = userId;
+  if (!user || user.role !== 'admin') {
+    targetUserId = user ? user.userId : userId;
+  }
+
   if (!isDBConnected()) {
     let data = mockBookings;
-    if (userId) data = data.filter((b) => b.userId === userId);
+    if (targetUserId) data = data.filter((b) => b.userId === targetUserId);
     return res.json({ success: true, data, source: 'mock' });
   }
   const query = {};
-  if (userId) query.userId = userId;
+  if (targetUserId) query.userId = targetUserId;
   if (status) query.status = status;
   if (bookingType) query.bookingType = bookingType;
   const bookings = await Booking.find(query)
@@ -31,15 +38,22 @@ exports.getBookings = asyncWrapper(async (req, res) => {
 
 // GET /api/v1/bookings/:id
 exports.getBooking = asyncWrapper(async (req, res) => {
+  const user = req.user;
   if (!isDBConnected()) {
     const b = mockBookings.find((b) => b._id === req.params.id);
     if (!b) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (user && user.role !== 'admin' && b.userId !== user.userId) {
+      return res.status(403).json({ success: false, message: 'Access denied: You can only view your own bookings.' });
+    }
     return res.json({ success: true, data: b, source: 'mock' });
   }
   const booking = await Booking.findById(req.params.id)
     .populate('unitId')
     .populate('projectId', 'name location amenities');
   if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+  if (user && user.role !== 'admin' && booking.userId !== user.userId) {
+    return res.status(403).json({ success: false, message: 'Access denied: You can only view your own bookings.' });
+  }
   res.json({ success: true, data: booking });
 });
 
