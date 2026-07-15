@@ -16,6 +16,9 @@ export default function Login() {
     
     try {
       const provider = new GoogleAuthProvider();
+      // Force Google account selection pop-up just like standard production sites
+      provider.setCustomParameters({ prompt: 'select_account' });
+      
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
@@ -38,62 +41,16 @@ export default function Login() {
         } else if (res.user.role === 'engineer') {
           navigate('/engineer');
         } else {
-          navigate('/buyer-lounge');
+          navigate('/buyer-lounge'); // client/buyer is routed to properties/buyer portal
         }
       } else {
         setError(res.error || 'Backend session verification failed.');
       }
     } catch (err) {
-      console.warn("Firebase Google Sign-In failed or config is missing. Triggering secure sandbox session bypass...", err);
-      // Sandbox bypass fallback
-      setTimeout(() => {
-        setLoading(false);
-        const mockEmail = `sandbox-google-user@gmail.com`;
-        const mockName = `Sandbox Google User`;
-        
-        localStorage.setItem('aura_token', 'mock-google-session-token-7766');
-        const mockSessionUser = { id: 'user-google-001', name: mockName, email: mockEmail, role: 'buyer' };
-        localStorage.setItem('aura_user', JSON.stringify(mockSessionUser));
-        
-        pushNotification({
-          type: 'success',
-          title: '🤖 Sandbox Google Auth Bypass',
-          message: `Successfully authenticated as ${mockName} (Buyer Lounge Access).`
-        });
-        navigate('/buyer-lounge');
-      }, 1200);
-    }
-  };
-
-  const handleDeveloperBypass = (role) => {
-    setLoading(true);
-    setTimeout(() => {
       setLoading(false);
-      const mockEmail = role === 'admin' 
-        ? 'admin@casaestate.com' 
-        : role === 'engineer' 
-        ? 'engineer@casaestate.com' 
-        : 'resident@casaestate.com';
-      const mockName = role === 'admin' 
-        ? 'Admin Developer' 
-        : role === 'engineer' 
-        ? 'Engineer Developer' 
-        : 'Resident Developer';
-      
-      localStorage.setItem('aura_token', `mock-${role}-session-token-8877`);
-      const mockSessionUser = { id: `user-dev-${role}`, name: mockName, email: mockEmail, role: role };
-      localStorage.setItem('aura_user', JSON.stringify(mockSessionUser));
-      
-      pushNotification({
-        type: 'success',
-        title: `✓ Dev Bypass: ${role.toUpperCase()}`,
-        message: `Welcome, ${mockName}! Bypassed Google Auth.`
-      });
-      
-      if (role === 'admin') navigate('/admin');
-      else if (role === 'engineer') navigate('/engineer');
-      else navigate('/resident-portal');
-    }, 600);
+      console.error("Firebase Google Sign-In failed:", err);
+      setError(err.message || 'Google Authentication failed. Please try again.');
+    }
   };
 
   return (
@@ -171,55 +128,24 @@ export default function Login() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              {loading ? 'Processing Auth...' : 'Login with Google'}
+              {loading ? 'Opening Google Account Select...' : 'Login with Google'}
             </button>
 
             {/* SignUp with Google Button */}
             <button
               onClick={() => handleGoogleLogin('signup')}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-650 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider disabled:opacity-50"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
               </svg>
-              {loading ? 'Processing Auth...' : 'SignUp with Google'}
+              {loading ? 'Opening Google Account Select...' : 'SignUp with Google'}
             </button>
           </div>
 
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-slate-200 dark:border-stone-800"></div>
-            <span className="flex-shrink mx-4 text-[9px] text-slate-400 dark:text-stone-550 uppercase font-black tracking-widest">Developer Bypasses</span>
-            <div className="flex-grow border-t border-slate-200 dark:border-stone-800"></div>
-          </div>
-
-          {/* Quick Developer Shortcuts */}
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDeveloperBypass('admin')}
-              className="py-2 text-[9px] bg-slate-50 hover:bg-slate-100 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-stone-300 font-bold uppercase tracking-wider rounded-lg transition-all border border-slate-200 dark:border-stone-700"
-            >
-              🛠️ Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDeveloperBypass('resident')}
-              className="py-2 text-[9px] bg-slate-50 hover:bg-slate-100 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-stone-300 font-bold uppercase tracking-wider rounded-lg transition-all border border-slate-200 dark:border-stone-700"
-            >
-              🏠 Resident
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDeveloperBypass('engineer')}
-              className="py-2 text-[9px] bg-slate-50 hover:bg-slate-100 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-stone-300 font-bold uppercase tracking-wider rounded-lg transition-all border border-slate-200 dark:border-stone-700"
-            >
-              🔧 Engineer
-            </button>
-          </div>
-
-          <p className="text-[10px] text-slate-455 dark:text-stone-500 leading-relaxed pt-2">
-            Social Single Sign-On ensures unified workspace isolation. Developer bypass locks sessions into simulated evaluation tokens.
+          <p className="text-[10px] text-slate-455 dark:text-stone-500 leading-relaxed pt-4">
+            Unified Single Sign-On handles secure workspace authorization. If the Google popup fails to load, ensure pop-up block settings are configured.
           </p>
 
         </div>
