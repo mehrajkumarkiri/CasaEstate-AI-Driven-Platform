@@ -214,12 +214,16 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
   };
 
   return (
-    <div className={embedMode ? "w-full text-slate-800 dark:text-slate-100 flex flex-col font-sans" : "pt-24 pb-16 min-h-screen bg-[#f4f4f3] dark:bg-stone-950 text-slate-800 dark:text-slate-105 flex flex-col font-sans transition-colors duration-350"}>
+    <div className={embedMode ? "w-full text-slate-805 dark:text-slate-100 flex flex-col font-sans" : "pt-24 pb-16 min-h-screen bg-[#f4f4f3] dark:bg-stone-950 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-350 relative overflow-hidden"}>
       
-      {/* Sleek Blue/Slate Light Login Gate */}
+      {/* Background Soft Mesh Accent Blur Glows */}
+      <div className="absolute top-10 left-10 w-80 h-80 bg-blue-400/10 dark:bg-blue-900/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-blue-300/10 dark:bg-indigo-900/10 rounded-full blur-[140px] pointer-events-none" />
+
+      {/* Glassmorphic Login Gate */}
       {showLoginOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-slate-205 dark:border-stone-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white/60 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
             
             {!passcodeMode ? (
               <>
@@ -240,7 +244,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                     <button
                       key={profile.role}
                       onClick={() => handleRoleSelection(profile.role)}
-                      className="w-full p-4 bg-slate-50 hover:bg-slate-100 dark:bg-stone-850 dark:hover:bg-stone-800 border border-slate-200 dark:border-stone-800 rounded-2xl flex items-center justify-between text-left transition-all hover:border-blue-500/40"
+                      className="w-full p-4 bg-white/40 dark:bg-stone-950/20 hover:bg-white/80 dark:hover:bg-stone-850/40 border border-white/60 dark:border-stone-800/40 rounded-2xl flex items-center justify-between text-left transition-all hover:border-blue-500/40"
                     >
                       <div>
                         <p className="text-xs font-bold text-slate-900 dark:text-white">{profile.label}</p>
@@ -251,7 +255,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-slate-105 dark:border-stone-800 pt-4">
+                <div className="flex items-center justify-between border-t border-slate-200/50 dark:border-stone-800/50 pt-4">
                   <button
                     onClick={() => navigate('/')}
                     className="text-[10px] text-slate-500 hover:text-slate-900 dark:text-stone-400 dark:hover:text-white font-bold uppercase tracking-wider transition-colors"
@@ -268,7 +272,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                     🔒
                   </div>
                   <h2 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white uppercase font-display">Passcode Required</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Enter authorization code for {targetRole === 'admin' ? 'Administrator' : 'Site Engineer'}</p>
+                  <p className="text-xs text-slate-550 dark:text-slate-400 font-medium">Enter authorization code for {targetRole === 'admin' ? 'Administrator' : 'Site Engineer'}</p>
                 </div>
 
                 <div className="space-y-4">
@@ -279,18 +283,18 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                       value={passcodeInput}
                       onChange={(e) => setPasscodeInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handlePasscodeSubmit()}
-                      className="w-full bg-slate-50 dark:bg-stone-950 border border-slate-200 dark:border-stone-800 text-xs px-4 py-3 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-blue-500 text-center font-mono tracking-widest"
+                      className="w-full bg-white/40 dark:bg-stone-950/20 border border-white/60 dark:border-stone-800/40 text-xs px-4 py-3 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-700 focus:outline-none focus:border-blue-500 text-center font-mono tracking-widest"
                       autoFocus
                     />
                     {passcodeError && (
-                      <p className="text-[10px] text-red-600 font-bold mt-2 text-center">{passcodeError}</p>
+                      <p className="text-[10px] text-red-650 font-bold mt-2 text-center">{passcodeError}</p>
                     )}
                   </div>
 
                   <div className="flex gap-2">
                     <button
                       onClick={() => setPasscodeMode(false)}
-                      className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-stone-700 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all"
+                      className="flex-1 bg-white/60 hover:bg-white/80 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-655 dark:text-slate-300 border border-white/60 dark:border-stone-700 font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all"
                     >
                       Cancel
                     </button>
@@ -303,7 +307,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   </div>
                 </div>
 
-                <div className="border-t border-slate-105 dark:border-stone-800 pt-4 text-center">
+                <div className="border-t border-slate-200/50 dark:border-stone-800/50 pt-4 text-center">
                   <p className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">Passcodes: admin123 / engineer123</p>
                 </div>
               </>
@@ -314,11 +318,11 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
 
       {/* Main Dashboard Panel */}
       {!showLoginOverlay && (
-        <div className={embedMode ? "w-full flex flex-col space-y-6 text-left pt-2" : "max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col space-y-6 text-left"}>
+        <div className={embedMode ? "w-full flex flex-col space-y-6 text-left pt-2 z-10 relative" : "max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 flex-1 flex flex-col space-y-6 text-left z-10 relative"}>
           
-          {/* Header Console */}
+          {/* Header Console - Translucent Glass */}
           {!embedMode && (
-            <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+            <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-lg">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
@@ -328,19 +332,18 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
               </div>
               
               <div className="flex items-center gap-2.5">
-                {/* Back button */}
                 <button
                   onClick={() => navigate('/')}
-                  className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 hover:bg-slate-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-stone-700 px-3.5 py-2 rounded-xl transition-all"
+                  className="text-[10px] font-bold uppercase tracking-wider bg-white/60 hover:bg-white/80 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-700 dark:text-slate-300 border border-white/60 dark:border-stone-700 px-3.5 py-2 rounded-xl transition-all shadow-xs"
                 >
                   ← Back to Home
                 </button>
-                <span className="text-[10px] bg-slate-50 dark:bg-stone-850 border border-slate-200 dark:border-stone-750 text-slate-600 dark:text-slate-350 font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl">
+                <span className="text-[10px] bg-white/60 dark:bg-stone-850/40 border border-white/60 dark:border-stone-750 text-slate-600 dark:text-slate-350 font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl">
                   Role: {userRole === 'engineer' ? 'Site Engineer' : userRole === 'client' ? 'Client / Investor' : 'Administrator'}
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 px-3.5 py-2 rounded-xl transition-all"
+                  className="text-[10px] font-bold uppercase tracking-wider bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 px-3.5 py-2 rounded-xl transition-all border border-red-100 dark:border-red-900/30"
                 >
                   Sign Out
                 </button>
@@ -348,14 +351,14 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
             </div>
           )}
 
-          {/* Grid Layout splits */}
+          {/* Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
             {/* Left Side: Pipeline Workflow Engine */}
             <div className="lg:col-span-8 space-y-6">
               
-              {/* Pipeline Sequence Map */}
-              <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 space-y-6 shadow-sm">
+              {/* Pipeline Sequence Map - Glassmorphic Card */}
+              <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-6 space-y-6 shadow-lg">
                 <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest font-mono">Stage: Tower A - Slab Casting</h3>
                 
                 {/* Step sequence progress tracker */}
@@ -364,8 +367,8 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   {/* Step 1 */}
                   <div className={`p-4 rounded-xl border transition-all ${
                     workflow.step1Completed 
-                      ? 'bg-blue-50 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 shadow-xs' 
-                      : 'bg-slate-50 dark:bg-stone-950 border-slate-100 dark:border-stone-850 text-slate-500 dark:text-slate-400'
+                      ? 'bg-blue-50/40 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 shadow-xs' 
+                      : 'bg-white/20 dark:bg-stone-950/25 border-white/40 dark:border-stone-850/40 text-slate-500 dark:text-slate-400'
                   }`}>
                     <p className="text-[9px] font-extrabold uppercase tracking-widest mb-1.5">Step 1: Field Checklist</p>
                     <p className="text-xs font-bold text-slate-900 dark:text-white mb-2">Engineer Approval</p>
@@ -377,10 +380,10 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   {/* Step 2 */}
                   <div className={`p-4 rounded-xl border transition-all ${
                     workflow.step2State === 'completed'
-                      ? 'bg-blue-50 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 shadow-xs'
+                      ? 'bg-blue-50/40 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 shadow-xs'
                       : workflow.step2State === 'processing'
-                      ? 'bg-blue-50/50 dark:bg-blue-950/10 border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 animate-pulse'
-                      : 'bg-slate-50 dark:bg-stone-950 border-slate-100 dark:border-stone-850 text-slate-500 dark:text-slate-400'
+                      ? 'bg-blue-50/30 dark:bg-blue-950/10 border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 animate-pulse'
+                      : 'bg-white/20 dark:bg-stone-950/25 border-white/40 dark:border-stone-850/40 text-slate-500 dark:text-slate-400'
                   }`}>
                     <p className="text-[9px] font-extrabold uppercase tracking-widest mb-1.5">Step 2: AI Telemetry Handshake</p>
                     <p className="text-xs font-bold text-slate-900 dark:text-white mb-2">Automated Audit</p>
@@ -392,8 +395,8 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   {/* Step 3 */}
                   <div className={`p-4 rounded-xl border transition-all ${
                     workflow.step3State === 'completed'
-                      ? 'bg-blue-50 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900 text-blue-700 dark:text-blue-300 shadow-xs'
-                      : 'bg-slate-50 dark:bg-stone-950 border-slate-100 dark:border-stone-850 text-slate-500 dark:text-slate-400'
+                      ? 'bg-blue-50/40 dark:bg-blue-950/15 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 shadow-xs'
+                      : 'bg-white/20 dark:bg-stone-950/25 border-white/40 dark:border-stone-850/40 text-slate-500 dark:text-slate-400'
                   }`}>
                     <p className="text-[9px] font-extrabold uppercase tracking-widest mb-1.5">Step 3: Cross-Dept Dispatch</p>
                     <p className="text-xs font-bold text-slate-900 dark:text-white mb-2">Deed & Compliance Ledger</p>
@@ -405,7 +408,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                 </div>
 
                 {/* Sub-form splits */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-105 dark:border-stone-800">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/50 dark:border-stone-800/50">
                   
                   {/* Step 1 Interactive Form */}
                   <div className="space-y-4">
@@ -429,8 +432,8 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                           onClick={() => handleChecklistToggle(item.id)}
                           className={`w-full p-3 rounded-xl border text-left flex items-center justify-between text-xs transition-all ${
                             workflow.checklist[item.id]
-                              ? 'bg-blue-50/50 dark:bg-stone-850 text-slate-900 dark:text-white border-blue-500/40 shadow-inner'
-                              : 'bg-slate-50 dark:bg-stone-950 text-slate-600 dark:text-slate-450 border-slate-200 dark:border-stone-800 hover:border-slate-300'
+                              ? 'bg-blue-50/40 dark:bg-stone-850/40 text-slate-900 dark:text-white border-blue-500/40 shadow-inner'
+                              : 'bg-white/20 dark:bg-stone-950/20 text-slate-600 dark:text-slate-400 border-white/60 dark:border-stone-800/60 hover:border-slate-300'
                           }`}
                         >
                           <span>{item.label}</span>
@@ -453,7 +456,7 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">🤖 AI Copilot Execution Terminal</h4>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Real-time trace logs from autonomous verification pipeline.</p>
                     
-                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 font-mono text-[10px] text-left h-[180px] overflow-y-auto space-y-1.5 scrollbar-hide text-white">
+                    <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-4 font-mono text-[10px] text-left h-[180px] overflow-y-auto space-y-1.5 scrollbar-hide text-white shadow-inner">
                       {workflow.consoleLogs.map((log, i) => (
                         <p key={i} className="text-slate-300">
                           <span className="text-blue-400 font-bold">&gt;</span> {log}
@@ -474,15 +477,15 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
               {/* Step 3 Outputs Block */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                {/* Project Map status */}
-                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 flex flex-col justify-between shadow-sm">
+                {/* Project Map status - Glassmorphic Card */}
+                <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-5 flex flex-col justify-between shadow-lg">
                   <div>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest font-mono">Structural Ledger State</span>
                     <h4 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mt-1">Project Stage Mutation Map</h4>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-normal mt-1 font-semibold">Automatically updates system-wide phase logs upon AI handshake.</p>
+                    <p className="text-[10px] text-slate-505 dark:text-slate-400 leading-normal mt-1 font-semibold">Automatically updates system-wide phase logs upon AI handshake.</p>
                   </div>
                   
-                  <div className="bg-slate-50 dark:bg-stone-950 border border-slate-200 dark:border-stone-850 rounded-xl p-5 my-4 flex items-center justify-between">
+                  <div className="bg-white/30 dark:bg-stone-950/20 border border-white/40 dark:border-stone-850/40 rounded-xl p-5 my-4 flex items-center justify-between shadow-inner">
                     <div>
                       <p className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider">Current Phase</p>
                       <p className="text-sm font-extrabold text-slate-900 dark:text-white font-mono mt-0.5">{workflow.projectMapState}</p>
@@ -495,15 +498,15 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   <p className="text-[10px] text-slate-500 font-bold">Ledger Block Hash: <span className="font-mono text-slate-400">0x39a1b...a912c</span></p>
                 </div>
 
-                {/* AI Progress Summary narrative block */}
-                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 flex flex-col justify-between shadow-sm">
+                {/* AI Progress Summary narrative block - Glassmorphic Card */}
+                <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-5 flex flex-col justify-between shadow-lg">
                   <div>
                     <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest font-mono">Autonomous Narrative Synthesizer</span>
                     <h4 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider mt-1">Conversational AI Progress Report</h4>
                   </div>
                   
-                  <div className="bg-slate-50 dark:bg-stone-950 border border-slate-200 dark:border-stone-850 rounded-xl p-4 my-4 flex-1 flex items-center justify-center">
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-semibold font-sans text-left">
+                  <div className="bg-white/30 dark:bg-stone-950/20 border border-white/40 dark:border-stone-850/40 rounded-xl p-4 my-4 flex-1 flex items-center justify-center shadow-inner">
+                    <p className="text-[11px] text-slate-650 dark:text-slate-300 leading-relaxed font-semibold font-sans text-left">
                       {workflow.aiSummary}
                     </p>
                   </div>
@@ -516,11 +519,10 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
 
               </div>
 
-              {/* Admin Predictive Charts vs Client Timeline */}
+              {/* Admin Predictive Charts vs Client Timeline - Glassmorphic Card */}
               {userRole !== 'client' ? (
-                /* Admin Dashboard view: Delay Risk & Cost Variance charts */
-                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 space-y-6 shadow-sm">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-105 dark:border-stone-850">
+                <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-6 space-y-6 shadow-lg">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-stone-800/50">
                     <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">📊 Admin Predictive Analytics Console</h3>
                     <span className="text-[9px] text-blue-600 dark:text-blue-400 font-mono font-bold">[Live telemetry feeds]</span>
                   </div>
@@ -566,25 +568,25 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                   </div>
                 </div>
               ) : (
-                /* Client view: timeline completion milestones */
-                <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-6 space-y-4 shadow-sm">
+                /* Client view timeline completion milestones - Glassmorphic Card */
+                <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-6 space-y-4 shadow-lg">
                   <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">🏗️ Noida Tower A Completion Milestones</h3>
                   
-                  <div className="relative border-l border-slate-200 dark:border-stone-800 pl-6 ml-4 py-4 space-y-6">
+                  <div className="relative border-l border-slate-200 dark:border-stone-850 pl-6 ml-4 py-4 space-y-6">
                     {[
                       { title: "Foundation Casting Completed", date: "June 2026", status: "Done", icon: "✓", color: "bg-blue-600" },
-                      { title: "4th Floor Slab Casting", date: "July 2026", status: workflow.step3State === 'completed' ? "Active Curing" : "Pending checklist", icon: "🏗️", color: workflow.step3State === 'completed' ? "bg-blue-505 animate-pulse" : "bg-slate-400" },
-                      { title: "MEP Installations & HVAC", date: "October 2026", status: "Scheduled", icon: "⚡", color: "bg-slate-300" },
-                      { title: "Finishing & Handover", date: "December 2026", status: "Scheduled", icon: "🔑", color: "bg-slate-300" }
+                      { title: "4th Floor Slab Casting", date: "July 2026", status: workflow.step3State === 'completed' ? "Active Curing" : "Pending checklist", icon: "🏗️", color: workflow.step3State === 'completed' ? "bg-blue-500 animate-pulse" : "bg-slate-450" },
+                      { title: "MEP Installations & HVAC", date: "October 2026", status: "Scheduled", icon: "⚡", color: "bg-slate-350" },
+                      { title: "Finishing & Handover", date: "December 2026", status: "Scheduled", icon: "🔑", color: "bg-slate-350" }
                     ].map((step, idx) => (
                       <div key={idx} className="relative text-left">
                         {/* Timeline Bullet */}
-                        <div className={`absolute -left-9 top-0.5 w-6 h-6 rounded-full ${step.color} border border-white dark:border-stone-900 flex items-center justify-center text-[9px] font-black text-white`}>
+                        <div className={`absolute -left-9 top-0.5 w-6 h-6 rounded-full ${step.color} border border-white dark:border-stone-900 flex items-center justify-center text-[9px] font-black text-white shadow-xs`}>
                           {step.icon}
                         </div>
                         <div>
                           <p className="text-xs font-bold text-slate-900 dark:text-white leading-none">{step.title}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-semibold">{step.date} · Status: <span className="font-bold text-blue-600 dark:text-blue-400">{step.status}</span></p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 font-semibold">{step.date} · Status: <span className="font-bold text-blue-650 dark:text-blue-400">{step.status}</span></p>
                         </div>
                       </div>
                     ))}
@@ -597,21 +599,21 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
             {/* Right Side: Digital Vault & Alert streams */}
             <div className="lg:col-span-4 space-y-6">
               
-              {/* Document Compliance Vault */}
-              <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 space-y-4 shadow-sm">
+              {/* Document Compliance Vault - Glassmorphic Card */}
+              <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-5 space-y-4 shadow-lg">
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">📁 Digital Compliance Vault</h3>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Ledger-secured records generated programmatically by workflow actions.</p>
                 
                 <div className="space-y-2 max-h-[220px] overflow-y-auto scrollbar-hide">
                   {workflow.documents.map((doc) => (
-                    <div key={doc.id} className="p-3 bg-slate-50 dark:bg-stone-950 border border-slate-105 dark:border-stone-850 rounded-xl flex items-center justify-between">
+                    <div key={doc.id} className="p-3 bg-white/30 dark:bg-stone-950/20 border border-white/40 dark:border-stone-850/40 rounded-xl flex items-center justify-between">
                       <div className="text-left">
                         <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight">{doc.title}</p>
                         <p className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold uppercase mt-0.5">{doc.type} · Issued {doc.date}</p>
                       </div>
                       <button
                         onClick={() => alert(`Downloading RERA ledger file ${doc.id} PDF...`)}
-                        className="text-[9px] font-bold bg-white dark:bg-stone-800 hover:bg-slate-100 dark:hover:bg-stone-750 text-slate-700 dark:text-stone-300 border border-slate-200 dark:border-stone-750 px-2 py-1 rounded"
+                        className="text-[9px] font-bold bg-white/60 dark:bg-stone-800 hover:bg-white/80 dark:hover:bg-stone-750 text-slate-700 dark:text-slate-350 border border-white/60 dark:border-stone-750 px-2 py-1 rounded shadow-xs"
                       >
                         PDF
                       </button>
@@ -620,21 +622,21 @@ export default function WorkflowDashboard({ embedMode = false, initialRole = nul
                 </div>
               </div>
 
-              {/* Alert logs stream */}
-              <div className="bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-800 rounded-3xl p-5 space-y-4 shadow-sm">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-105 dark:border-stone-850">
+              {/* Alert logs stream - Glassmorphic Card */}
+              <div className="bg-white/50 dark:bg-stone-900/40 backdrop-blur-md border border-white/60 dark:border-stone-800/40 rounded-3xl p-5 space-y-4 shadow-lg">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-stone-800/50">
                   <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-widest font-mono">🔔 Live Alert Stream</h3>
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
                 </div>
 
                 <div className="space-y-3 max-h-[200px] overflow-y-auto scrollbar-hide">
                   {clientAlerts.map((alert) => (
-                    <div key={alert.id} className="text-left space-y-0.5 pb-2 border-b border-slate-105 dark:border-stone-850 last:border-0">
+                    <div key={alert.id} className="text-left space-y-0.5 pb-2 border-b border-slate-200/50 dark:border-stone-800/50 last:border-0">
                       <div className="flex items-center gap-1.5 text-[9px] text-slate-400 dark:text-slate-500 font-bold font-mono">
                         <span>[{alert.time}]</span>
                         <span className="text-blue-600 dark:text-blue-400">SYSTEM_ALERT</span>
                       </div>
-                      <p className="text-[11px] text-slate-650 dark:text-slate-300 leading-normal font-semibold pl-1">
+                      <p className="text-[11px] text-slate-655 dark:text-slate-300 leading-normal font-semibold pl-1">
                         {alert.msg}
                       </p>
                     </div>

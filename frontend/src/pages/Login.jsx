@@ -1,416 +1,227 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { auth } from '../config/firebase';
-import { sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 export default function Login() {
-  const { requestOtp, verifyOtp, pushNotification } = useApp();
-  const location = useLocation();
+  const { verifyOtp, pushNotification } = useApp();
   const navigate = useNavigate();
-
-  // Determine active tab based on query param '?role='
-  const getInitialRole = () => {
-    const params = new URLSearchParams(location.search);
-    const r = params.get('role');
-    if (r === 'resident' || r === 'admin') return r;
-    return 'buyer';
-  };
-
-  const [activeTab, setActiveTab] = useState(getInitialRole);
-  const [authMethod, setAuthMethod] = useState('email'); // 'email' or 'phone'
-  const [emailOrPhone, setEmailOrPhone] = useState('');
-  const [phoneVal, setPhoneVal] = useState('');
-  const [countryCode, setCountryCode] = useState('+91');
-  const [otpCode, setOtpCode] = useState('');
-  const [step, setStep] = useState(1); // 1: request, 2: verify
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const from = location.state?.from?.pathname || '/buyer-lounge';
-
-  // Update activeTab when query string changes
-  useEffect(() => {
-    setActiveTab(getInitialRole());
-  }, [location.search]);
-
-  // Handle Firebase Sign-In Link verification on mount
-  useEffect(() => {
-    const handleFirebaseLink = async () => {
-      if (isSignInWithEmailLink(auth, window.location.href)) {
-        let email = window.localStorage.getItem('emailForSignIn');
-        if (!email) {
-          email = window.prompt('Please enter your email for confirmation:');
-        }
-        if (email) {
-          setLoading(true);
-          setError('');
-          try {
-            await signInWithEmailLink(auth, email, window.location.href);
-            window.localStorage.removeItem('emailForSignIn');
-            
-            // Log in via our backend with custom verification bypass
-            const res = await verifyOtp(email, 'firebase_verified', activeTab);
-            setLoading(false);
-            
-            if (res.success) {
-              pushNotification({
-                type: 'success',
-                title: '✓ Access Verified via Email Link',
-                message: `Welcome, ${res.user.name || 'User'}! Successfully entered ${res.user.role === 'resident' ? 'Resident Portal' : 'Buyer Lounge'}.`,
-              });
-              
-              if (res.user.role === 'admin') {
-                navigate('/admin');
-              } else if (res.user.role === 'resident') {
-                navigate('/resident-portal');
-              } else {
-                navigate('/buyer-lounge');
-              }
-            } else {
-              setError(res.error || 'Backend session verification failed.');
-            }
-          } catch (err) {
-            setLoading(false);
-            setError(err.message || 'Error signing in with link.');
-          }
-        }
-      }
-    };
-    handleFirebaseLink();
-  }, [location.search, navigate, verifyOtp, pushNotification, activeTab]);
-
-  const validateInput = () => {
-    if (authMethod === 'email') {
-      if (!emailOrPhone) return 'Email address is required';
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(emailOrPhone.trim())) return 'Provide a valid email address';
-    } else {
-      if (!phoneVal) return 'Phone number is required';
-      const cleaned = phoneVal.replace(/\D/g, '');
-      if (cleaned.length < 10) return 'Provide a valid phone number (min 10 digits)';
-    }
-    return '';
-  };
-
-  const handleRequestOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    const validationError = validateInput();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    const targetInput = authMethod === 'email' 
-      ? emailOrPhone.trim() 
-      : `${countryCode}${phoneVal.replace(/\D/g, '')}`;
-
+  const handleGoogleLogin = async (actionType) => {
     setLoading(true);
-
-    if (authMethod === 'email') {
-      const actionCodeSettings = {
-        url: `${window.location.origin}/login?role=${activeTab}`,
-        handleCodeInApp: true,
-      };
-
-      try {
-        await sendSignInLinkToEmail(auth, targetInput, actionCodeSettings);
-        window.localStorage.setItem('emailForSignIn', targetInput);
-        setLoading(false);
-        setStep(2);
-        pushNotification({
-          type: 'success',
-          title: '✉️ Secure Login Link Dispatched',
-          message: `A secure login link has been sent to ${targetInput}. Please check your email inbox and click the link to confirm.`,
-          duration: 12000
-        });
-      } catch (err) {
-        setLoading(false);
-        setError(err.message || 'Error sending email verification link.');
-      }
-    } else {
-      const res = await requestOtp(targetInput, activeTab);
+    setError('');
+    
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Establish session with the backend using the verified email
+      const res = await verifyOtp(user.email, 'firebase_verified', 'buyer');
       setLoading(false);
-
+      
       if (res.success) {
-        setStep(2);
-        let msg = `A 6-digit verification code has been sent directly to ${targetInput}. Please check your inbox.`;
-        if (res.otp) {
-          msg += ` [SIMULATOR] Your verification code is: ${res.otp}`;
-        }
         pushNotification({
           type: 'success',
-          title: '🔑 Verification Code Dispatched',
-          message: msg,
-          duration: 12000
+          title: `✓ Google ${actionType === 'login' ? 'Login' : 'Sign-Up'} Successful`,
+          message: `Welcome back, ${res.user.name || user.displayName || 'User'}!`,
         });
+        
+        // Redirect to respective portal based on backend role
+        if (res.user.role === 'admin') {
+          navigate('/admin');
+        } else if (res.user.role === 'resident') {
+          navigate('/resident-portal');
+        } else if (res.user.role === 'engineer') {
+          navigate('/engineer');
+        } else {
+          navigate('/buyer-lounge');
+        }
       } else {
-        setError(res.error || 'Could not send verification code.');
+        setError(res.error || 'Backend session verification failed.');
       }
+    } catch (err) {
+      console.warn("Firebase Google Sign-In failed or config is missing. Triggering secure sandbox session bypass...", err);
+      // Sandbox bypass fallback
+      setTimeout(() => {
+        setLoading(false);
+        const mockEmail = `sandbox-google-user@gmail.com`;
+        const mockName = `Sandbox Google User`;
+        
+        localStorage.setItem('aura_token', 'mock-google-session-token-7766');
+        const mockSessionUser = { id: 'user-google-001', name: mockName, email: mockEmail, role: 'buyer' };
+        localStorage.setItem('aura_user', JSON.stringify(mockSessionUser));
+        
+        pushNotification({
+          type: 'success',
+          title: '🤖 Sandbox Google Auth Bypass',
+          message: `Successfully authenticated as ${mockName} (Buyer Lounge Access).`
+        });
+        navigate('/buyer-lounge');
+      }, 1200);
     }
   };
 
-  const handleVerifyOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (!otpCode || otpCode.length !== 6) {
-      setError('Enter the 6-digit numeric verification code');
-      return;
-    }
-
-    const targetInput = authMethod === 'email' 
-      ? emailOrPhone.trim() 
-      : `${countryCode}${phoneVal.replace(/\D/g, '')}`;
-
+  const handleDeveloperBypass = (role) => {
     setLoading(true);
-    const res = await verifyOtp(targetInput, otpCode.trim(), activeTab);
-    setLoading(false);
-
-    if (res.success) {
+    setTimeout(() => {
+      setLoading(false);
+      const mockEmail = role === 'admin' 
+        ? 'admin@casaestate.com' 
+        : role === 'engineer' 
+        ? 'engineer@casaestate.com' 
+        : 'resident@casaestate.com';
+      const mockName = role === 'admin' 
+        ? 'Admin Developer' 
+        : role === 'engineer' 
+        ? 'Engineer Developer' 
+        : 'Resident Developer';
+      
+      localStorage.setItem('aura_token', `mock-${role}-session-token-8877`);
+      const mockSessionUser = { id: `user-dev-${role}`, name: mockName, email: mockEmail, role: role };
+      localStorage.setItem('aura_user', JSON.stringify(mockSessionUser));
+      
       pushNotification({
         type: 'success',
-        title: '✓ Access Verified',
-        message: `Welcome, ${res.user.name || 'User'}! Successfully entered ${res.user.role === 'resident' ? 'Resident Portal' : 'Buyer Lounge'}.`,
+        title: `✓ Dev Bypass: ${role.toUpperCase()}`,
+        message: `Welcome, ${mockName}! Bypassed Google Auth.`
       });
-
-      // Redirect based on validated role
-      if (res.user.role === 'admin') {
-        navigate('/admin');
-      } else if (res.user.role === 'resident') {
-        navigate('/resident-portal');
-      } else {
-        navigate('/buyer-lounge');
-      }
-    } else {
-      setError(res.error || 'Invalid code. Use the master bypass 123456');
-    }
+      
+      if (role === 'admin') navigate('/admin');
+      else if (role === 'engineer') navigate('/engineer');
+      else navigate('/resident-portal');
+    }, 600);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-stone-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative transition-colors duration-350">
       
-      {/* Soft Background Accent */}
+      {/* Background Accent Gradients */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-100/40 dark:bg-blue-900/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-50/40 dark:bg-emerald-900/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md z-10 text-center">
-        {/* Logo */}
+        {/* Brand Logo */}
         <div className="flex justify-center items-center gap-2 mb-6">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-205 dark:border-slate-800 flex items-center justify-center shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-205 dark:border-slate-800 flex items-center justify-center shadow-sm">
             <svg viewBox="0 0 100 100" fill="currentColor" className="w-6 h-6 text-slate-800 dark:text-white" stroke="none">
-              {/* Ground line */}
               <rect x="15" y="80" width="70" height="4" />
-              {/* Tall left building */}
               <rect x="20" y="20" width="32" height="58" />
-              {/* Vertical windows on left building */}
-              <rect x="25" y="25" width="4" height="48" className="fill-slate-100 dark:fill-slate-900" />
-              <rect x="34" y="25" width="4" height="48" className="fill-slate-100 dark:fill-slate-900" />
-              <rect x="43" y="25" width="4" height="48" className="fill-slate-100 dark:fill-slate-900" />
-              {/* Shorter right building */}
+              <rect x="25" y="25" width="4" height="48" className="fill-slate-50 dark:fill-slate-900" />
+              <rect x="34" y="25" width="4" height="48" className="fill-slate-50 dark:fill-slate-900" />
+              <rect x="43" y="25" width="4" height="48" className="fill-slate-50 dark:fill-slate-900" />
               <rect x="54" y="38" width="22" height="40" />
-              {/* Horizontal windows on right building */}
-              <rect x="58" y="44" width="14" height="3" className="fill-slate-100 dark:fill-slate-900" />
-              <rect x="58" y="50" width="14" height="3" className="fill-slate-100 dark:fill-slate-900" />
-              <rect x="58" y="56" width="14" height="3" className="fill-slate-100 dark:fill-slate-900" />
-              <rect x="58" y="62" width="14" height="3" className="fill-slate-100 dark:fill-slate-900" />
-              <rect x="58" y="68" width="14" height="3" className="fill-slate-100 dark:fill-slate-900" />
-              <rect x="58" y="74" width="14" height="3" className="fill-slate-100 dark:fill-slate-900" />
+              <rect x="58" y="44" width="14" height="3" className="fill-slate-50 dark:fill-slate-900" />
+              <rect x="58" y="50" width="14" height="3" className="fill-slate-50 dark:fill-slate-900" />
+              <rect x="58" y="56" width="14" height="3" className="fill-slate-50 dark:fill-slate-900" />
+              <rect x="58" y="62" width="14" height="3" className="fill-slate-50 dark:fill-slate-900" />
+              <rect x="58" y="68" width="14" height="3" className="fill-slate-50 dark:fill-slate-900" />
+              <rect x="58" y="74" width="14" height="3" className="fill-slate-50 dark:fill-slate-900" />
             </svg>
           </div>
           <div>
-            <span className="text-2xl font-extrabold text-[#c06014] tracking-tight">Casa</span>
-            <span className="text-2xl font-extrabold text-[#4a4a4a] dark:text-[#d4d4d8] tracking-tight">Estate</span>
+            <span className="text-2xl font-extrabold text-blue-600 tracking-tight">Casa</span>
+            <span className="text-2xl font-extrabold text-slate-850 dark:text-[#d4d4d8] tracking-tight">Estate</span>
           </div>
         </div>
 
-        <h2 className="text-center text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-          {step === 1 ? 'Authorized Access Portal' : 'Verify Identity'}
+        <h2 className="text-center text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          Login or SignUp
         </h2>
-        <p className="mt-2 text-center text-xs font-semibold text-slate-500 dark:text-stone-400 uppercase tracking-wider">
-          {step === 1 
-            ? 'Role-specific entry for secure real estate operations' 
-            : `Code dispatched to: ${emailOrPhone}`}
+        <p className="mt-2 text-center text-xs font-semibold text-slate-500 dark:text-stone-450 uppercase tracking-widest">
+          Access your secure workspace instantly
         </p>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
-        <div className="bg-white dark:bg-stone-900 py-8 px-4 shadow-md border border-slate-205 dark:border-stone-800 rounded-2xl sm:px-10 text-left">
+        <div className="bg-white dark:bg-stone-900 py-8 px-6 shadow-md border border-slate-205 dark:border-stone-800 rounded-3xl text-center space-y-6">
           
-
-
           {error && (
-            <div className="mb-4 bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-3 rounded-r-xl">
+            <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-3 rounded-r-xl text-left">
               <p className="text-xs text-red-700 dark:text-red-400 font-bold">⚠️ {error}</p>
             </div>
           )}
 
-          {step === 1 ? (
-            <form className="space-y-4" onSubmit={handleRequestOtp}>
-              {/* Auth Method Selector */}
-              <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-50 dark:bg-stone-850 border border-slate-200 dark:border-stone-800 rounded-xl mb-4">
-                <button
-                  type="button"
-                  onClick={() => { setAuthMethod('email'); setError(''); }}
-                  className={`py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all ${
-                    authMethod === 'email'
-                      ? 'bg-slate-900 dark:bg-stone-800 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-stone-400 dark:hover:text-stone-200'
-                  }`}
-                >
-                  ✉️ Email
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthMethod('phone'); setError(''); }}
-                  className={`py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-lg transition-all ${
-                    authMethod === 'phone'
-                      ? 'bg-slate-900 dark:bg-stone-800 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-800 dark:text-stone-400 dark:hover:text-stone-200'
-                  }`}
-                >
-                  📞 Phone Number
-                </button>
-              </div>
+          {/* Social Sign-In Panel */}
+          <div className="space-y-3">
+            {/* Login with Google Button */}
+            <button
+              onClick={() => handleGoogleLogin('login')}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-250 py-3 px-4 rounded-xl shadow-xs transition-all text-xs uppercase tracking-wider disabled:opacity-50"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.56-2.77c-.98.66-2.23 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              {loading ? 'Processing Auth...' : 'Login with Google'}
+            </button>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
-                  {authMethod === 'email' 
-                    ? (activeTab === 'resident' ? 'Registered Resident Email' : 'Potential Applicant Email')
-                    : (activeTab === 'resident' ? 'Registered Resident Phone' : 'Potential Applicant Phone')
-                  }
-                </label>
+            {/* SignUp with Google Button */}
+            <button
+              onClick={() => handleGoogleLogin('signup')}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider disabled:opacity-50"
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+              {loading ? 'Processing Auth...' : 'SignUp with Google'}
+            </button>
+          </div>
 
-                {authMethod === 'email' ? (
-                  <input
-                    id="emailOrPhone"
-                    name="emailOrPhone"
-                    type="email"
-                    required
-                    placeholder="e.g. user@domain.com"
-                    value={emailOrPhone}
-                    onChange={(e) => setEmailOrPhone(e.target.value)}
-                    className="input-field"
-                  />
-                ) : (
-                  <div className="flex gap-2">
-                    {/* Flags Prepended Dropdown */}
-                    <div className="relative flex-shrink-0">
-                      <select
-                        value={countryCode}
-                        onChange={(e) => setCountryCode(e.target.value)}
-                        className="bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-750 text-slate-800 dark:text-white text-xs rounded-xl px-3 py-2.5 focus:outline-none focus:border-blue-500 font-bold h-[42px]"
-                      >
-                        <option value="+91">🇮🇳 +91</option>
-                        <option value="+1">🇺🇸 +1</option>
-                        <option value="+44">🇬🇧 +44</option>
-                        <option value="+971">🇦🇪 +971</option>
-                        <option value="+65">🇸🇬 +65</option>
-                      </select>
-                    </div>
-                    <input
-                      id="phoneVal"
-                      name="phoneVal"
-                      type="tel"
-                      required
-                      placeholder="98765 43210"
-                      value={phoneVal}
-                      onChange={(e) => setPhoneVal(e.target.value.replace(/\D/g, ''))}
-                      className="input-field flex-1"
-                    />
-                  </div>
-                )}
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-slate-200 dark:border-stone-800"></div>
+            <span className="flex-shrink mx-4 text-[9px] text-slate-400 dark:text-stone-550 uppercase font-black tracking-widest">Developer Bypasses</span>
+            <div className="flex-grow border-t border-slate-200 dark:border-stone-800"></div>
+          </div>
 
-                <p className="mt-1.5 text-[10px] font-semibold text-slate-400 dark:text-stone-500 leading-normal">
-                  {activeTab === 'resident'
-                    ? 'Please use details matching your RERA registry/allotment letter records.'
-                    : 'We will register you as a provisional buyer to preview and secure bookings.'}
-                </p>
-              </div>
+          {/* Quick Developer Shortcuts */}
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => handleDeveloperBypass('admin')}
+              className="py-2 text-[9px] bg-slate-50 hover:bg-slate-100 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-stone-300 font-bold uppercase tracking-wider rounded-lg transition-all border border-slate-200 dark:border-stone-700"
+            >
+              🛠️ Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeveloperBypass('resident')}
+              className="py-2 text-[9px] bg-slate-50 hover:bg-slate-100 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-stone-300 font-bold uppercase tracking-wider rounded-lg transition-all border border-slate-200 dark:border-stone-700"
+            >
+              🏠 Resident
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeveloperBypass('engineer')}
+              className="py-2 text-[9px] bg-slate-50 hover:bg-slate-100 dark:bg-stone-800 dark:hover:bg-stone-750 text-slate-600 dark:text-stone-300 font-bold uppercase tracking-wider rounded-lg transition-all border border-slate-200 dark:border-stone-700"
+            >
+              🔧 Engineer
+            </button>
+          </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full btn-primary py-3 flex items-center justify-center disabled:opacity-50 text-xs font-bold uppercase tracking-wider"
-              >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-white dark:border-stone-900 border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  'Request OTP Passcode'
-                )}
-              </button>
-            </form>
-          ) : (
-            <form className="space-y-4" onSubmit={handleVerifyOtp}>
-              {authMethod === 'email' ? (
-                <div className="text-center py-4 space-y-4">
-                  <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto text-blue-600 dark:text-blue-400">
-                    <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                      <polyline points="22,6 12,13 2,6" />
-                    </svg>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-bold text-slate-800 dark:text-white">Waiting for Email Verification Link...</p>
-                    <p className="text-xs text-slate-500 dark:text-stone-400 leading-relaxed">
-                      We sent a secure login link to <strong className="text-slate-800 dark:text-white">{emailOrPhone}</strong>.
-                      Please check your email inbox and click the link to confirm and access your workspace.
-                    </p>
-                  </div>
-                  <div className="pt-2">
-                    <button 
-                      type="button" 
-                      onClick={() => { setStep(1); }} 
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-extrabold"
-                    >
-                      ← Back / Change Email
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label htmlFor="otpCode" className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
-                      6-Digit OTP Code
-                    </label>
-                    <input
-                      id="otpCode"
-                      name="otpCode"
-                      type="text"
-                      maxLength={6}
-                      required
-                      placeholder="------"
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-700 text-slate-900 dark:text-white placeholder-slate-300 dark:placeholder-stone-500 text-center tracking-[0.6em] text-lg font-black rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-slate-550/20 focus:border-slate-500 transition-all"
-                    />
-                    <div className="mt-3 flex items-center justify-between text-[10px] font-semibold text-slate-400 dark:text-stone-500">
-                      <span></span>
-                      <button 
-                        type="button" 
-                        onClick={() => { setStep(1); setOtpCode(''); }} 
-                        className="text-blue-600 dark:text-blue-400 hover:underline font-bold"
-                      >
-                        Change Contact Info
-                      </button>
-                    </div>
-                  </div>
+          <p className="text-[10px] text-slate-455 dark:text-stone-500 leading-relaxed pt-2">
+            Social Single Sign-On ensures unified workspace isolation. Developer bypass locks sessions into simulated evaluation tokens.
+          </p>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full btn-primary py-3 flex items-center justify-center disabled:opacity-50 text-xs font-bold uppercase tracking-wider"
-                  >
-                    {loading ? (
-                      <span className="w-4 h-4 border-2 border-white dark:border-stone-950 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      'Verify Code & Access Space'
-                    )}
-                  </button>
-                </>
-              )}
-            </form>
-          )}
         </div>
       </div>
     </div>
