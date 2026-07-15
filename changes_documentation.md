@@ -1,71 +1,54 @@
-# CasaEstate — Refactoring & Feature Upgrades Changelog
+# CasaEstate AI Platform — Refactoring & Feature Upgrades Changelog
 
-This document lists all modifications, design choices, and security updates introduced to the CasaEstate platform.
-
----
-
-## 🎨 Focus & Branding Realignment (Problem Solving & AI-First)
-*   **Aesthetics Reorientation**: Shifted the home page copy and visual layout from a generic real estate listings brochure to an **AI-First Autonomous Real Estate Platform**.
-*   **Hero Upgrade**: The hero title is updated to showcase the integration of multi-agent swarm loops, predictive delay trackers, and automated RERA compliance ledgers.
-*   **AIVoiceChatSimulator Integration**: Prominently embedded the voice call simulator directly on the home page client section to highlight AI-driven customer operations.
+This document lists all active modifications, design enhancements, and backend refactors introduced to the CasaEstate platform.
 
 ---
 
-## 🔒 Security & Concurrency Enhancements (Multiple User Access & No Data Leakage)
-1.  **React Error Boundary Shield**:
-    *   Created [ErrorBoundary.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/components/ErrorBoundary.jsx).
-    *   Wrapped the main entry point in [main.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/main.jsx) to intercept and recover from any rendering or JavaScript execution crashes without breaking the web app.
-2.  **JWT Mismatch Resolution**:
-    *   Aligned the default token signing secret in the authentication controller with the secret verified by the gateway middleware in [authMiddleware.js](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/backend/src/middleware/authMiddleware.js).
-3.  **Owner Data Scoping**:
-    *   Secured bookings routes ([bookingRoutes.js](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/backend/src/routes/bookingRoutes.js)) and ledger routes ([ledgerRoutes.js](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/backend/src/routes/ledgerRoutes.js)) with JWT `authenticate` middleware.
-    *   Enforced check in [bookingController.js](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/backend/src/controllers/bookingController.js) and [ledgerController.js](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/backend/src/controllers/ledgerController.js):
-        *   Non-admin users can **only** query or download their own transactions (`userId === req.user.userId`).
-        *   Admins retain global lookup capabilities.
-        *   This guarantees zero data redundancy or leakage where User A could view User B's entries.
+### 🎨 Focus & Branding Realignment (AI-First Operations)
+- [x] **Branding Overhaul**: Shifted homepage copy and visual guides to highlight an **AI-First Autonomous Real Estate Platform** rather than a generic properties brochure.
+- [x] **Branding Rename**: Renamed the "Workflow AI" section to **"Casa AI"** across all header navigation bars, route links, and buttons.
+- [x] **Removed Tower Portfolios Catalog**: Deleted the static tower listing grids and properties searches, keeping the page focused on AI-driven construction tracking and investor portal controls.
+- [x] **Sliding Theme Switcher Integration**: Removed the floating theme pill from the homepage body and integrated it as a responsive sliding theme switcher directly in the header [Navbar.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/components/Navbar.jsx).
 
 ---
 
-## 🌐 Dynamic Landing Portal Entry Gate (Role Routing on Opening)
-*   **Entry Popup Gate**:
-    *   Designed a role picker popup that mounts upon landing on `/`.
-    *   Allows entering as:
-        1.  **Client / Investor**: Closes popup and presents properties and AI tools.
-        2.  **Resident**: Redirects to the Resident Portal login screen.
-        3.  **Site Engineer**: Prompts for passcode (`engineer123`). Grants instant session and redirects to Field Console.
-        4.  **Builder Admin**: Prompts for passcode (`admin123`). Grants instant session and redirects to Admin Cockpit.
-*   **Client Search Bar**:
-    *   Added a real-time properties search bar on the homepage to filter towers (Noida, Gurugram, Mumbai) by address, name, or status.
+### 🔒 Standard Credentials Login (No OTP / No Google Auth)
+- [x] **Email & Password Authentication**: Removed all Google Single Sign-On (SSO/GSI) APIs and OTP verification codes, implementing a standard **Email ID and Password** form field for registration and logins.
+- [x] **Automatic Role Router**: Programmatically redirects authenticated sessions to their designated dashboards:
+  - **Client / Buyer Users** -> Routed to the `/buyer-lounge` properties space.
+  - **Resident Users** -> Routed to the `/resident-portal`.
+  - **Administrators** -> Routed to the `/admin` console.
+  - **Site Engineers** -> Routed to the `/engineer` console.
+- [x] **Pre-Seeded Test Credentials**: Configured SHA-256 hashed password credentials for testing roles in the database controller, printing them directly on the login card for easy evaluation:
+  - **Resident**: `arjun.mehta@email.com` / `password123`
+  - **Admin**: `admin@casaestate.com` / `password123`
+  - **Site Engineer**: `engineer@casaestate.com` / `password123`
 
 ---
 
-## 🎙️ AI Voice Call Desk & Operations Simulator
-*   Created [AIVoiceChatSimulator.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/components/AIVoiceChatSimulator.jsx):
-    *   **Call Mode**: Renders a glowing audio waveform animation and voice-speaking logs. Simulates an operations helpline where clients query telemetry details (concrete density, RERA status, cost variance).
-    *   **Chat Mode**: Simulates a WhatsApp chat.
-    *   Both modes utilize the backend Gemini endpoint to generate precise answers from the latest progress telemetry.
+### 🤖 Casa AI Dashboard (Glassmorphism & Security)
+- [x] **Vibrant Glassmorphism Styling**: Redesigned all cards, telemetry logs, document boxes, and headers inside [WorkflowDashboard.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/pages/WorkflowDashboard.jsx) with translucent backdrops (`bg-white/50 backdrop-blur-md` in light mode, `dark:bg-stone-900/40` in dark mode) layered over a radial mesh gradient to match the website theme.
+- [x] **Role Passcode Gates**: Gated access to both the **Site Engineer** and **Builder Admin** sections of the Casa AI panel behind passcode authentication prompts (`engineer123` and `admin123`).
+- [x] **Back Navigation Controls**: Integrated a visible `← Back to Home` control in the dashboard header to allow easy return navigation.
 
 ---
 
-## 🤖 Workflow AI Glassmorphism & Passcode Security
-*   **Glassmorphic Theme**:
-    *   Upgraded [WorkflowDashboard.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/pages/WorkflowDashboard.jsx) container grids and console panels to vibrant glassmorphism designs with translucent backdrops (`backdrop-blur-md bg-white/5 border-white/10`).
-*   **Role Passcode Gates**:
-    *   Separated Site Engineer and Admin sections. Selecting these roles now requires `engineer123` / `admin123` passcodes.
-*   **Navigation Back Button**:
-    *   Integrated a clear `← Back to Home` button in the header bar and login overlay to easily navigate back.
+### 🔒 Concurrency & Data Isolation
+- [x] **React Error Boundary Shield**: Integrated [ErrorBoundary.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/components/ErrorBoundary.jsx) and wrapped the root component tree to isolate rendering exceptions and prevent total page crashes.
+- [x] **Owner Data Scoping (Zero Leakage)**: Secured the ledger and booking controllers in the Express backend. Non-admin users are strictly restricted to querying records matched with their specific token payload (`req.user.userId`), preventing cross-user data leakage.
 
 ---
 
-## 💬 Unrestricted Gemini Chatbot Upgrade
-*   **General Purpose Answering**:
-    *   Upgraded [aiRoutes.js](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/backend/src/routes/aiRoutes.js) prompt instructions. The bot can now answer **any** question, including coding, history, and math, while holding its persona.
-    *   Increased response tokens limit from 150 to 800 to enable detailed logs.
-*   **Custom Client Keys Settings**:
-    *   Upgraded [CasaBotWidget.jsx](file:///C:/Users/kumar/.gemini/antigravity/scratch/aura-estates/frontend/src/components/CasaBotWidget.jsx). Added a settings gear button enabling users to configure their own Gemini API key in `localStorage` which is dynamically sent in requests.
-    *   Added simple Markdown rendering to parse generated code blocks (` ``` `) in chat bubbles.
+### 💬 Unrestricted CasaBot Chat Widget
+- [x] **Unrestricted Answering Bot**: Enhanced the chatbot instructions in the backend routing to allow the bot to answer any developer query (code, math, logic) while preserving its CasaEstate persona. Raised output limits to 800 tokens for comprehensive detail.
+- [x] **Hardcoded Server Key**: Removed the settings gear and manual API key inputs from the widget. The bot now authenticates using the secure backend environment variable key.
 
 ---
 
-## 💎 Footer Overhaul
-*   Replaced the simple footer link strip with a detailed, four-column structure highlighting **AI Core Services**, **Operational Access Portals**, **RERA registrations**, and **Google Gemini** backend engine integrations.
+### ⚙️ Python Event-Driven Swarm Backend
+- [x] **FastAPI Microservice Architecture**: Created `casa_ai_backend/` containing SQLAlchemy databases, schemas, and async pub-sub swarm triggers (`agents.py` and `event_bus.py`) to manage site delays and compliance ledger audits in the background.
+
+---
+
+### 💎 Footer Realignment
+- [x] **Detailed Footer Layout**: Replaced the simple footer link strip with a detailed, four-column structure highlighting RERA credentials, operations gateways, and Google Gemini integrations.
