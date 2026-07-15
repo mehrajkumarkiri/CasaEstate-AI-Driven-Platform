@@ -232,7 +232,7 @@ export default function Login() {
           </div>
 
           <p className="text-[10px] text-slate-455 dark:text-stone-500 text-center leading-relaxed">
-            Enter your credentials to verify your workspace access tokens. Accounts ending in @casaestate.com are automatically assigned Admin access.
+            Enter your email ID and password to access the Client Lounge or Resident Portal. For quick testing, use Resident (email: <strong className="text-slate-700 dark:text-stone-300">arjun.mehta@email.com</strong> / password: <strong className="text-slate-700 dark:text-stone-300">password123</strong>) or Admin (email: <strong className="text-slate-700 dark:text-stone-300">admin@casaestate.com</strong> / password: <strong className="text-slate-700 dark:text-stone-300">password123</strong>).
           </p>
 
         </div>

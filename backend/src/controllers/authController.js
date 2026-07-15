@@ -6,6 +6,8 @@ const Otp = require('../models/Otp');
 const asyncWrapper = require('../middleware/asyncWrapper');
 const { sendRealTimeOtp } = require('../services/otpService');
 
+const defaultHashedPassword = crypto.createHash('sha256').update('password123').digest('hex');
+
 // In-memory fallbacks for mock mode
 const mockUsers = [
   {
@@ -14,6 +16,7 @@ const mockUsers = [
     email: 'arjun.mehta@email.com',
     phone: '+91-9876543210',
     role: 'resident',
+    password: defaultHashedPassword,
     projectId: 'proj-001',
     unitId: 'unit-proj-001-f3-u2',
     tower: 'A',
@@ -24,7 +27,16 @@ const mockUsers = [
     name: 'CasaEstate Administrator',
     email: 'admin@casaestate.com',
     phone: '+91-9999999999',
-    role: 'admin'
+    role: 'admin',
+    password: defaultHashedPassword
+  },
+  {
+    _id: 'user-engineer-001',
+    name: 'Field Site Engineer',
+    email: 'engineer@casaestate.com',
+    phone: '+91-8888888888',
+    role: 'engineer',
+    password: defaultHashedPassword
   }
 ];
 
