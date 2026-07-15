@@ -82,6 +82,38 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  const login = useCallback(async (email, password) => {
+    try {
+      const res = await authApi.login(email, password);
+      if (res.success && res.token && res.user) {
+        localStorage.setItem('aura_token', res.token);
+        localStorage.setItem('aura_user', JSON.stringify(res.user));
+        setAuthToken(res.token);
+        setCurrentUser(res.user);
+        return { success: true, user: res.user };
+      }
+      return { success: false, error: 'Login failed' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, []);
+
+  const signup = useCallback(async (data) => {
+    try {
+      const res = await authApi.signup(data);
+      if (res.success && res.token && res.user) {
+        localStorage.setItem('aura_token', res.token);
+        localStorage.setItem('aura_user', JSON.stringify(res.user));
+        setAuthToken(res.token);
+        setCurrentUser(res.user);
+        return { success: true, user: res.user };
+      }
+      return { success: false, error: 'Registration failed' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, []);
+
   const logout = useCallback(() => {
     localStorage.removeItem('aura_token');
     localStorage.removeItem('aura_user');
@@ -127,6 +159,8 @@ export function AppProvider({ children }) {
         setActiveProject,
         theme,
         toggleTheme,
+        login,
+        signup,
       }}
     >
       {children}

@@ -1,98 +1,87 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function Login() {
-  const { verifyOtp, pushNotification } = useApp();
+  const { login, signup, pushNotification } = useApp();
   const navigate = useNavigate();
+  
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleCredentialResponse = async (response) => {
-    setLoading(true);
-    setError('');
-    
-    try {
-      // Decode JWT token payload from Google Identity Services response
-      const base64Url = response.credential.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(
-        window.atob(base64)
-          .split('')
-          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-          .join('')
-      );
-      
-      const googleUser = JSON.parse(jsonPayload);
-      
-      // Establish session with the backend using the verified email
-      const res = await verifyOtp(googleUser.email, 'firebase_verified', 'buyer');
-      setLoading(false);
-      
-      if (res.success) {
-        pushNotification({
-          type: 'success',
-          title: '✓ Google Authentication Successful',
-          message: `Welcome back, ${res.user.name || googleUser.name}!`,
-        });
-        
-        // Redirect to respective portal based on backend role
-        if (res.user.role === 'admin') {
-          navigate('/admin');
-        } else if (res.user.role === 'resident') {
-          navigate('/resident-portal');
-        } else if (res.user.role === 'engineer') {
-          navigate('/engineer');
-        } else {
-          navigate('/buyer-lounge'); // client/buyer is routed to properties/buyer portal
-        }
-      } else {
-        setError(res.error || 'Backend session verification failed.');
-      }
-    } catch (err) {
-      setLoading(false);
-      console.error("GSI payload parsing or session creation failed:", err);
-      setError('Google Sign-In failed during token processing.');
+  const redirectUser = (user) => {
+    if (user.role === 'admin') {
+      navigate('/admin');
+    } else if (user.role === 'resident') {
+      navigate('/resident-portal');
+    } else if (user.role === 'engineer') {
+      navigate('/engineer');
+    } else {
+      navigate('/buyer-lounge');
     }
   };
 
-  useEffect(() => {
-    // Dynamically load Google GSI script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: '662894785515-iv6ij1iej4oi80qdfhvdije6jngeacut.apps.googleusercontent.com',
-          callback: handleCredentialResponse,
-          auto_select: false
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (isSignUp) {
+        if (!name.trim() || !email.trim() || !phone.trim() || !password) {
+          setError('All registration fields are required.');
+          setLoading(false);
+          return;
+        }
+        
+        const res = await signup({
+          name: name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          password: password
         });
         
-        // Render the official Google Sign-In/SignUp button
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-target'),
-          { 
-            theme: 'outline', 
-            size: 'large', 
-            text: 'continue_with', 
-            shape: 'rectangular',
-            width: '340'
-          }
-        );
-      }
-    };
-    document.body.appendChild(script);
+        setLoading(false);
+        if (res.success) {
+          pushNotification({
+            type: 'success',
+            title: '✓ Account Registered',
+            message: `Welcome to CasaEstate, ${res.user.name || 'User'}!`
+          });
+          redirectUser(res.user);
+        } else {
+          setError(res.error || 'Registration failed.');
+        }
+      } else {
+        if (!email.trim() || !password) {
+          setError('Please provide both your email and password.');
+          setLoading(false);
+          return;
+        }
 
-    return () => {
-      // Clean up the script on unmount
-      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-      if (existingScript) {
-        document.body.removeChild(existingScript);
+        const res = await login(email.trim().toLowerCase(), password);
+        setLoading(false);
+        if (res.success) {
+          pushNotification({
+            type: 'success',
+            title: '✓ Login Successful',
+            message: `Welcome back, ${res.user.name || 'User'}!`
+          });
+          redirectUser(res.user);
+        } else {
+          setError(res.error || 'Invalid email or password.');
+        }
       }
-    };
-  }, []);
+    } catch (err) {
+      setLoading(false);
+      setError(err.message || 'Authentication error.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-stone-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative transition-colors duration-350">
@@ -127,37 +116,123 @@ export default function Login() {
         </div>
 
         <h2 className="text-center text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-          Login or SignUp
+          {isSignUp ? 'Sign Up' : 'Login'}
         </h2>
-        <p className="mt-2 text-center text-xs font-semibold text-slate-500 dark:text-stone-450 uppercase tracking-widest">
-          Access your secure workspace instantly
+        <p className="mt-2 text-center text-xs font-semibold text-slate-505 dark:text-stone-450 uppercase tracking-widest">
+          {isSignUp ? 'Create a secure workspace' : 'Access your secure workspace'}
         </p>
       </div>
 
       <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
-        <div className="bg-white dark:bg-stone-900 py-8 px-6 shadow-md border border-slate-205 dark:border-stone-800 rounded-3xl text-center space-y-6">
+        <div className="bg-white dark:bg-stone-900 py-8 px-6 shadow-md border border-slate-205 dark:border-stone-800 rounded-3xl text-left space-y-6">
           
           {error && (
-            <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-3 rounded-r-xl text-left">
+            <div className="bg-red-50 dark:bg-red-950/20 border-l-4 border-red-500 p-3 rounded-r-xl">
               <p className="text-xs text-red-700 dark:text-red-400 font-bold">⚠️ {error}</p>
             </div>
           )}
 
-          {/* Social Sign-In Panel */}
-          <div className="flex flex-col items-center justify-center py-2 space-y-4">
-            {loading && (
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs text-slate-500 font-semibold">Authenticating with Google...</span>
-              </div>
+          {/* Credentials Authentication Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <>
+                {/* Name Field */}
+                <div>
+                  <label htmlFor="name" className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                    Full Name
+                  </label>
+                  <input
+                    id="name"
+                    type="text"
+                    required
+                    placeholder="e.g. Arjun Mehta"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-700 text-slate-900 dark:text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Phone Field */}
+                <div>
+                  <label htmlFor="phone" className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                    Phone Number
+                  </label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    required
+                    placeholder="e.g. +91-9876543210"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-700 text-slate-900 dark:text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </>
             )}
-            
-            {/* Target Div for Google Identity Services SDK Render */}
-            <div id="google-signin-target" className="min-h-[44px] flex items-center justify-center"></div>
+
+            {/* Email Field */}
+            <div>
+              <label htmlFor="email" className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                placeholder="e.g. user@domain.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-700 text-slate-900 dark:text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label htmlFor="password" className="block text-xs font-bold text-slate-700 dark:text-stone-300 uppercase tracking-wider mb-1.5">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-700 text-slate-900 dark:text-white text-xs rounded-xl px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-wider disabled:opacity-50"
+            >
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-white dark:border-stone-900 border-t-transparent rounded-full animate-spin" />
+              ) : isSignUp ? (
+                'Create Account'
+              ) : (
+                'Login'
+              )}
+            </button>
+          </form>
+
+          {/* Toggle login/signup mode links */}
+          <div className="text-center pt-2">
+            <button
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError('');
+              }}
+              className="text-xs text-blue-600 dark:text-blue-400 font-bold hover:underline"
+            >
+              {isSignUp ? 'Already have an account? Log In' : "Don't have an account? Sign Up"}
+            </button>
           </div>
 
-          <p className="text-[10px] text-slate-455 dark:text-stone-500 leading-relaxed pt-2">
-            Social Single Sign-On ensures unified workspace isolation. Click the Google button to open account selection.
+          <p className="text-[10px] text-slate-455 dark:text-stone-500 text-center leading-relaxed">
+            Enter your credentials to verify your workspace access tokens. Accounts ending in @casaestate.com are automatically assigned Admin access.
           </p>
 
         </div>

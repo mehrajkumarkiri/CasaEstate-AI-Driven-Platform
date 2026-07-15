@@ -5,9 +5,10 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true, unique: true },
+    password: { type: String },
     role: {
       type: String,
-      enum: ['buyer', 'resident', 'admin'],
+      enum: ['buyer', 'resident', 'admin', 'engineer'],
       default: 'buyer',
     },
     // For residents, link to their project and unit

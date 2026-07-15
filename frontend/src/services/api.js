@@ -32,6 +32,8 @@ api.interceptors.response.use(
 export const authApi = {
   requestOtp: (emailOrPhone, role) => api.post('/auth/request-otp', { emailOrPhone, role }),
   verifyOtp: (emailOrPhone, otp, role) => api.post('/auth/verify-otp', { emailOrPhone, otp, role }),
+  login: (email, password) => api.post('/auth/login', { email, password }),
+  signup: (data) => api.post('/auth/signup', data),
 };
 
 // ─── Projects ──────────────────────────────────────────────────────────────────

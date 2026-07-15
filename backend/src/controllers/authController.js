@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Otp = require('../models/Otp');
 const asyncWrapper = require('../middleware/asyncWrapper');
@@ -170,7 +171,128 @@ const verifyOtp = asyncWrapper(async (req, res) => {
   });
 });
 
+const login = asyncWrapper(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Email and password are required' });
+  }
+
+  const isDbConnected = mongoose.connection.readyState === 1;
+  const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+  let user = null;
+
+  if (isDbConnected) {
+    user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+    }
+    if (user.password && user.password !== hashedPassword) {
+      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+    }
+  } else {
+    user = mockUsers.find(u => u.email === email);
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+    }
+    if (user.password && user.password !== hashedPassword) {
+      return res.status(400).json({ success: false, message: 'Invalid email or password' });
+    }
+  }
+
+  // Sign JWT
+  const token = jwt.sign(
+    { userId: user._id, role: user.role, email: user.email },
+    process.env.JWT_SECRET || 'casa-estate-super-secret-jwt-key-2026',
+    { expiresIn: '7d' }
+  );
+
+  res.status(200).json({
+    success: true,
+    token,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      projectId: user.projectId,
+      unitId: user.unitId,
+      tower: user.tower,
+      unitNumber: user.unitNumber
+    }
+  });
+});
+
+const signup = asyncWrapper(async (req, res) => {
+  const { email, password, name, phone, role } = req.body;
+  if (!email || !password || !name || !phone) {
+    return res.status(400).json({ success: false, message: 'All fields (name, email, phone, password) are required' });
+  }
+
+  const isDbConnected = mongoose.connection.readyState === 1;
+  const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+  let user = null;
+
+  let targetRole = role || 'buyer';
+  if (email.endsWith('@casaestate.com')) {
+    targetRole = 'admin';
+  } else if (email.endsWith('@site.com')) {
+    targetRole = 'engineer';
+  }
+
+  if (isDbConnected) {
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'User with this email already exists' });
+    }
+
+    user = await User.create({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      role: targetRole
+    });
+  } else {
+    const existing = mockUsers.find(u => u.email === email);
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'User with this email already exists' });
+    }
+
+    user = {
+      _id: `user-mock-${Date.now()}`,
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      role: targetRole
+    };
+    mockUsers.push(user);
+  }
+
+  // Sign JWT
+  const token = jwt.sign(
+    { userId: user._id, role: user.role, email: user.email },
+    process.env.JWT_SECRET || 'casa-estate-super-secret-jwt-key-2026',
+    { expiresIn: '7d' }
+  );
+
+  res.status(201).json({
+    success: true,
+    token,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role
+    }
+  });
+});
+
 module.exports = {
   requestOtp,
-  verifyOtp
+  verifyOtp,
+  login,
+  signup
 };
