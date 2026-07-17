@@ -121,6 +121,11 @@ export default function PropertyDiscovery() {
   const [aiParsing, setAiParsing] = useState(false);
   const [aiMessage, setAiMessage] = useState('');
 
+  const [showProfiler, setShowProfiler] = useState(false);
+  const [profilerStep, setProfilerStep] = useState(1);
+  const [profileAnswers, setProfileAnswers] = useState({ goal: '', vibe: '', funding: '' });
+  const [profileResult, setProfileResult] = useState(null);
+
   const enriched = useMemo(() => projects.map(enrichProject), [projects]);
 
   const handleAiSearch = () => {
@@ -281,9 +286,20 @@ export default function PropertyDiscovery() {
       {/* Page header */}
       <section className="border-b border-slate-205 dark:border-stone-800 bg-white dark:bg-stone-900 py-10 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <p className="text-xs font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest mb-1">Property Discovery</p>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-slate-900 dark:text-white">Find Your Home</h1>
-          <p className="text-xs text-slate-500 dark:text-stone-400 mt-1">Filter registered premium towers by budget, layout, possession date, amenities, and locality.</p>
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-105 dark:border-stone-850 pb-5 mb-5">
+            <div className="text-left">
+              <p className="text-xs font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest mb-1">Property Discovery</p>
+              <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-slate-900 dark:text-white">Find Your Home</h1>
+              <p className="text-xs text-slate-500 dark:text-stone-400 mt-1">Filter registered premium towers by budget, layout, possession date, amenities, and locality.</p>
+            </div>
+            
+            <button
+              onClick={() => { setShowProfiler(true); setProfilerStep(1); setProfileResult(null); }}
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-[10px] font-black uppercase tracking-widest px-5 py-3 rounded-xl flex items-center gap-2 border-none shadow-lg shadow-emerald-950/20 transition-all cursor-pointer"
+            >
+              📋 AI Lead Intent Profiler
+            </button>
+          </div>
 
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
             <div className="text-left">
@@ -463,6 +479,7 @@ export default function PropertyDiscovery() {
                   compareChecked={compareIds.includes(listing._id)}
                   compareDisabled={compareIds.length >= 3}
                   onToggleCompare={toggleCompare}
+                  matchPercentage={profileResult ? profileResult.matches[listing._id] : null}
                 />
               ))}
             </div>
@@ -604,6 +621,188 @@ export default function PropertyDiscovery() {
                     <p className="text-[8px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">CasaAI Advisor Recommendation</p>
                     <p className="text-xs font-semibold text-slate-700 dark:text-indigo-205 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: generateAiReport(compareProjects).recommendation }} />
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AI Lead Intent Profiler Modal */}
+      {showProfiler && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setShowProfiler(false)} />
+          <div className="relative bg-white dark:bg-stone-900 border border-slate-205 dark:border-stone-800 rounded-3xl w-full max-w-lg p-6 shadow-2xl z-10 text-left">
+            <div className="flex justify-between items-center mb-5 border-b border-slate-200 dark:border-stone-800 pb-3">
+              <div>
+                <span className="text-[9px] text-emerald-605 dark:text-emerald-400 font-mono font-bold uppercase tracking-widest">Lead Qualification Engine</span>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider animate-pulse">AI Buyer Intent Profiler</h3>
+              </div>
+              <button onClick={() => setShowProfiler(false)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-stone-800 text-slate-400 hover:text-slate-800 dark:hover:text-white">✕</button>
+            </div>
+
+            {profilerStep === 1 && (
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-slate-700 dark:text-stone-300">Step 1 of 3: What is your primary purchase goal?</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { label: 'Self-Use (Immediate or near-term residency)', value: 'Self-Use' },
+                    { label: 'Rental Yield (Passive cash flow & high tenancy)', value: 'Rental Yield' },
+                    { label: 'Capital Appreciation (Long-term growth)', value: 'Capital Appreciation' },
+                  ].map(o => (
+                    <button
+                      key={o.value}
+                      onClick={() => { setProfileAnswers(prev => ({ ...prev, goal: o.value })); setProfilerStep(2); }}
+                      className="bg-slate-50 hover:bg-slate-100 dark:bg-stone-850 dark:hover:bg-stone-800 border border-slate-205 dark:border-stone-750 text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-805 dark:text-stone-200 transition-colors cursor-pointer"
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {profilerStep === 2 && (
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-slate-700 dark:text-stone-300">Step 2 of 3: What environment fits your lifestyle best?</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    { label: 'Connected & Bustling (Near corporate nodes & commercial centers)', value: 'Connected & Bustling' },
+                    { label: 'Green, Quiet & Low-Density (Villas, expansive open areas)', value: 'Green, Quiet & Low-Density' },
+                  ].map(o => (
+                    <button
+                      key={o.value}
+                      onClick={() => { setProfileAnswers(prev => ({ ...prev, vibe: o.value })); setProfilerStep(3); }}
+                      className="bg-slate-50 hover:bg-slate-100 dark:bg-stone-850 dark:hover:bg-stone-800 border border-slate-205 dark:border-stone-750 text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-805 dark:text-stone-200 transition-colors cursor-pointer"
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setProfilerStep(1)} className="text-[10px] font-bold text-slate-400 hover:text-slate-650 block mt-2">← Back</button>
+              </div>
+            )}
+
+            {profilerStep === 3 && (
+              <div className="space-y-4">
+                <p className="text-xs font-bold text-slate-700 dark:text-stone-300">Step 3 of 3: What is your target funding method?</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    'All-Cash Purchase',
+                    'Partial Bank Loan & Personal Funds',
+                    'High-Ratio Bank Loan (>80%)',
+                  ].map(opt => (
+                    <button
+                      key={opt}
+                      onClick={() => {
+                        const updated = { ...profileAnswers, funding: opt };
+                        setProfileAnswers(updated);
+                        setTimeout(() => {
+                          let score = 70;
+                          let grade = 'Warm Explorer';
+                          if (updated.goal === 'Self-Use') {
+                            if (updated.funding !== 'High-Ratio Bank Loan (>80%)') {
+                              score = 95;
+                              grade = 'Hot Lead - Active Purchaser';
+                            } else {
+                              score = 88;
+                              grade = 'Hot Lead - Financing Required';
+                            }
+                          } else if (updated.goal === 'Rental Yield') {
+                            if (updated.funding === 'All-Cash Purchase') {
+                              score = 90;
+                              grade = 'Hot Lead - Cash Investor';
+                            } else {
+                              score = 82;
+                              grade = 'Warm Lead - Investor';
+                            }
+                          } else {
+                            score = 75;
+                            grade = 'Warm Lead - Future Appreciation';
+                          }
+
+                          const matches = {};
+                          enriched.forEach(p => {
+                            let matchScore = 70;
+                            if (updated.goal === 'Self-Use' && (p._id === 'proj-001' || p.name.includes('Horizon'))) matchScore += 15;
+                            if (updated.goal === 'Rental Yield' && (p._id === 'proj-002' || p.name.includes('Serenity'))) matchScore += 20;
+                            if (updated.goal === 'Capital Appreciation' && (p._id === 'proj-003' || p.name.includes('Pinnacle'))) matchScore += 25;
+                            if (updated.vibe === 'Connected & Bustling' && (p._id === 'proj-001' || p._id === 'proj-003' || p.name.includes('Horizon') || p.name.includes('Pinnacle'))) matchScore += 10;
+                            if (updated.vibe === 'Green, Quiet & Low-Density' && (p._id === 'proj-002' || p.name.includes('Serenity'))) matchScore += 15;
+                            matches[p._id] = Math.min(matchScore, 98);
+                          });
+
+                          setProfileResult({ intentScore: score, leadGrade: grade, matches });
+                          setProfilerStep(4);
+                        }, 500);
+                      }}
+                      className="bg-slate-50 hover:bg-slate-100 dark:bg-stone-850 dark:hover:bg-stone-800 border border-slate-205 dark:border-stone-750 text-left px-4 py-3 rounded-xl text-xs font-bold text-slate-805 dark:text-stone-200 transition-colors cursor-pointer"
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setProfilerStep(2)} className="text-[10px] font-bold text-slate-400 hover:text-slate-650 block mt-2">← Back</button>
+              </div>
+            )}
+
+            {profilerStep === 4 && profileResult && (
+              <div className="space-y-5">
+                <div className="bg-slate-50 dark:bg-stone-850 border border-slate-205 dark:border-stone-750 rounded-2xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-[8px] font-black text-slate-400 dark:text-stone-500 uppercase tracking-widest">Calculated Intent Score</p>
+                    <p className="text-xl font-black text-slate-900 dark:text-white mt-1 leading-none">{profileResult.intentScore}%</p>
+                  </div>
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                    profileResult.intentScore >= 90 ? 'bg-emerald-100 text-emerald-805 dark:bg-emerald-950/40 dark:text-emerald-450' : 'bg-blue-105 text-blue-808 dark:bg-blue-950/40 dark:text-blue-450'
+                  }`}>
+                    {profileResult.leadGrade}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black text-slate-400 dark:text-stone-500 uppercase tracking-widest">Match Strength Mapped to Inventory</p>
+                  <div className="space-y-2">
+                    {enriched.map(p => (
+                      <div key={p._id} className="flex items-center justify-between gap-4 bg-slate-50 dark:bg-stone-850 p-2.5 rounded-xl border border-slate-100 dark:border-stone-800">
+                        <div className="truncate text-xs font-bold text-slate-800 dark:text-stone-200">{p.name}</div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="w-16 bg-slate-200 dark:bg-stone-800 h-2 rounded-full overflow-hidden">
+                            <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${profileResult.matches[p._id]}%` }} />
+                          </div>
+                          <span className="text-[10px] font-black text-slate-700 dark:text-stone-300">{profileResult.matches[p._id]}% Match</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl p-4 flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-sm flex-shrink-0">💼</div>
+                  <div>
+                    <p className="text-[8px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Agent Negotiation Advice</p>
+                    <p className="text-xs font-semibold text-slate-750 dark:text-emerald-205 mt-1 leading-relaxed">
+                      {profileResult.intentScore >= 90
+                        ? `Client is highly active. Pitch immediate site tours and emphasize inventory scarcity in Gurugram/Mumbai.`
+                        : `Client is exploring appreciation timelines. Nurture with RERA documentation files and long-term infrastructure projections.`
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-stone-800">
+                  <button
+                    onClick={() => { setShowProfiler(false); }}
+                    className="bg-emerald-650 hover:bg-emerald-550 text-white text-xs font-black uppercase tracking-wider py-2.5 rounded-xl flex-1 border-none shadow-md cursor-pointer transition-colors"
+                  >
+                    Apply Match Ratings to Discovery Grid
+                  </button>
+                  <button
+                    onClick={() => { setProfileResult(null); setProfilerStep(1); }}
+                    className="border border-slate-205 dark:border-stone-750 text-slate-500 dark:text-stone-400 hover:text-slate-805 dark:hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer"
+                  >
+                    Retake
+                  </button>
                 </div>
               </div>
             )}

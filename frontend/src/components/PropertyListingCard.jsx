@@ -38,7 +38,7 @@ const generateTrendData = (minPrice, maxPrice, builderRating) => {
   });
 };
 
-export default function PropertyListingCard({ listing, index = 0, compareChecked = false, onToggleCompare, compareDisabled = false }) {
+export default function PropertyListingCard({ listing, index = 0, compareChecked = false, onToggleCompare, compareDisabled = false, matchPercentage }) {
   const [showForecaster, setShowForecaster] = useState(false);
   const sc = statusConfig[listing.status] || statusConfig['Under Construction'];
   const availableCount = listing.units?.filter(u => u.availability === 'Available').length;
@@ -48,6 +48,15 @@ export default function PropertyListingCard({ listing, index = 0, compareChecked
 
   return (
     <div className="group relative bg-white dark:bg-stone-900 border border-slate-205 dark:border-stone-800 rounded-2xl overflow-hidden flex flex-col hover:border-slate-400 dark:hover:border-stone-600 transition-all duration-300 hover:-translate-y-1 text-left">
+
+      {/* Match Percentage Badge */}
+      {typeof matchPercentage === 'number' && (
+        <div className="absolute z-10 top-3 left-24">
+          <span className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-md shadow-emerald-950/20 border border-emerald-500/20">
+            ✨ {matchPercentage}% Match
+          </span>
+        </div>
+      )}
 
       {/* Compare checkbox */}
       <label
