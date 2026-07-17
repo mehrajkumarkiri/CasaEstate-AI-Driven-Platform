@@ -116,8 +116,6 @@ export default function MilestoneTimeline({ milestones = [], compact = false }) 
 
       {/* Phase steps */}
       <div className="relative">
-        {/* Connector line */}
-        <div className="absolute top-7 left-7 right-7 h-0.5 bg-slate-200 dark:bg-stone-700 hidden sm:block" />
 
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-2">
           {PHASES.map((phase, idx) => {

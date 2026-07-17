@@ -4,6 +4,7 @@ import { useProjects } from '../hooks/useProjects';
 import PropertyListingCard from '../components/PropertyListingCard';
 import { ProjectCardSkeleton } from '../components/SkeletonLoader';
 import { formatCurrencyShort, formatDate } from '../utils/formatters';
+import { useApp } from '../context/AppContext';
 
 const BHK_OPTIONS = ['2BHK', '3BHK', '4BHK'];
 const POSSESSION_OPTIONS = [
@@ -108,6 +109,7 @@ function generateAiReport(projects) {
 
 export default function PropertyDiscovery() {
   const { projects, loading } = useProjects();
+  const { currentUser } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [budget, setBudget] = useState(MAX_BUDGET);
   const [selectedBhk, setSelectedBhk] = useState([]);
@@ -125,6 +127,14 @@ export default function PropertyDiscovery() {
   const [profilerStep, setProfilerStep] = useState(1);
   const [profileAnswers, setProfileAnswers] = useState({ goal: '', vibe: '', funding: '' });
   const [profileResult, setProfileResult] = useState(null);
+
+  // 3D Walkthrough States
+  const [selected3DProperty, setSelected3DProperty] = useState(null);
+  const [show3DModal, setShow3DModal] = useState(false);
+  const [walkthroughRoom, setWalkthroughRoom] = useState('lounge');
+  const [walkthroughAngle, setWalkthroughAngle] = useState(45);
+  const [walkthroughNightMode, setWalkthroughNightMode] = useState(false);
+  const [walkthroughZoom, setWalkthroughZoom] = useState(1);
 
   const enriched = useMemo(() => projects.map(enrichProject), [projects]);
 
@@ -480,6 +490,14 @@ export default function PropertyDiscovery() {
                   compareDisabled={compareIds.length >= 3}
                   onToggleCompare={toggleCompare}
                   matchPercentage={profileResult ? profileResult.matches[listing._id] : null}
+                  onOpen3DView={(item) => {
+                    setSelected3DProperty(item);
+                    setShow3DModal(true);
+                    setWalkthroughRoom('lounge');
+                    setWalkthroughAngle(45);
+                    setWalkthroughNightMode(false);
+                    setWalkthroughZoom(1);
+                  }}
                 />
               ))}
             </div>
@@ -806,6 +824,211 @@ export default function PropertyDiscovery() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* 🕶️ 3D Interactive Walkthrough Modal */}
+      {show3DModal && selected3DProperty && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-md" onClick={() => setShow3DModal(false)} />
+          <div className="relative bg-slate-950 border border-slate-800 rounded-3xl w-full max-w-4xl p-6 shadow-2xl z-10 grid grid-cols-1 md:grid-cols-12 gap-6 text-white animate-fade-in">
+            
+            {/* Header Block */}
+            <div className="col-span-1 md:col-span-12 flex justify-between items-center border-b border-slate-850 pb-4">
+              <div>
+                <span className="text-[10px] text-emerald-400 font-mono font-bold uppercase tracking-widest leading-none">CasaAI Premium Suite Walkthrough</span>
+                <h3 className="text-base font-black uppercase tracking-wider mt-0.5">🕶️ 3D Virtual Walkthrough: {selected3DProperty.name}</h3>
+              </div>
+              <button 
+                onClick={() => setShow3DModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Left Column: Rotating 3D Viewscreen */}
+            <div className="md:col-span-7 bg-slate-900/60 border border-slate-850 rounded-2xl p-6 flex flex-col items-center justify-center relative min-h-[300px] overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.03] bg-grid pointer-events-none" />
+              
+              {/* Rotating Canvas Wrapper */}
+              <div className="w-64 h-64 flex items-center justify-center relative transition-transform duration-500 ease-out">
+                {/* 3D SVG Render */}
+                {(() => {
+                  const strokeColor = walkthroughNightMode ? '#6366f1' : '#34d399';
+                  const fillColor = walkthroughNightMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(52, 211, 153, 0.1)';
+                  const gridColor = walkthroughNightMode ? '#1e1b4b' : '#064e3b';
+                  const transformStyle = `rotate(${walkthroughAngle}deg) scale(${walkthroughZoom})`;
+
+                  if (walkthroughRoom === 'lounge') {
+                    return (
+                      <svg viewBox="0 0 200 200" className="w-full h-full transition-all duration-500" style={{ transform: transformStyle }}>
+                        <polygon points="100,20 180,70 100,120 20,70" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+                        <line x1="60" y1="45" x2="140" y2="95" stroke={gridColor} strokeWidth="0.5" strokeDasharray="2 2" />
+                        <line x1="140" y1="45" x2="60" y2="95" stroke={gridColor} strokeWidth="0.5" strokeDasharray="2 2" />
+                        <polygon points="70,65 110,65 95,80 55,80" fill="none" stroke={strokeColor} strokeWidth="1.5" />
+                        <polygon points="55,80 95,80 95,90 55,90" fill="none" stroke={strokeColor} strokeWidth="1.5" />
+                        <polygon points="100,85 120,85 110,95 90,95" fill="none" stroke={strokeColor} strokeWidth="1" />
+                      </svg>
+                    );
+                  } else if (walkthroughRoom === 'bedroom') {
+                    return (
+                      <svg viewBox="0 0 200 200" className="w-full h-full transition-all duration-500" style={{ transform: transformStyle }}>
+                        <polygon points="100,20 180,70 100,120 20,70" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+                        <polygon points="60,60 110,60 90,95 40,95" fill="none" stroke={strokeColor} strokeWidth="1.8" />
+                        <polygon points="65,65 80,65 75,72 60,72" fill="none" stroke={strokeColor} strokeWidth="1" />
+                        <polygon points="85,65 100,65 95,72 80,72" fill="none" stroke={strokeColor} strokeWidth="1" />
+                      </svg>
+                    );
+                  } else if (walkthroughRoom === 'kitchen') {
+                    return (
+                      <svg viewBox="0 0 200 200" className="w-full h-full transition-all duration-500" style={{ transform: transformStyle }}>
+                        <polygon points="100,20 180,70 100,120 20,70" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+                        <polygon points="30,65 70,45 80,55 40,75" fill="none" stroke={strokeColor} strokeWidth="1.5" />
+                        <polygon points="80,55 120,40 130,50 90,65" fill="none" stroke={strokeColor} strokeWidth="1.5" />
+                      </svg>
+                    );
+                  } else {
+                    return (
+                      <svg viewBox="0 0 200 200" className="w-full h-full transition-all duration-500" style={{ transform: transformStyle }}>
+                        <polygon points="100,20 180,70 100,120 20,70" fill={fillColor} stroke={strokeColor} strokeWidth="1.5" />
+                        <line x1="20" y1="70" x2="100" y2="120" stroke={strokeColor} strokeWidth="2.5" />
+                        <line x1="20" y1="60" x2="20" y2="70" stroke={strokeColor} strokeWidth="1.5" />
+                        <line x1="40" y1="72" x2="40" y2="82" stroke={strokeColor} strokeWidth="1.5" />
+                        <line x1="60" y1="85" x2="60" y2="95" stroke={strokeColor} strokeWidth="1.5" />
+                        <line x1="80" y1="97" x2="80" y2="107" stroke={strokeColor} strokeWidth="1.5" />
+                        <line x1="100" y1="110" x2="100" y2="120" stroke={strokeColor} strokeWidth="1.5" />
+                      </svg>
+                    );
+                  }
+                })()}
+              </div>
+
+              {/* Viewscreen Interactive Tool Tray */}
+              <div className="w-full mt-4 flex items-center justify-between bg-slate-950/80 border border-slate-850 px-4 py-2.5 rounded-xl text-[10px]">
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setWalkthroughAngle(prev => prev - 45)}
+                    className="bg-slate-900 border border-slate-800 hover:border-slate-700 text-white px-3 py-1.5 rounded-lg cursor-pointer"
+                  >
+                    ↺ Rotate Left
+                  </button>
+                  <button 
+                    onClick={() => setWalkthroughAngle(prev => prev + 45)}
+                    className="bg-slate-900 border border-slate-800 hover:border-slate-700 text-white px-3 py-1.5 rounded-lg cursor-pointer"
+                  >
+                    ↻ Rotate Right
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-slate-400">Zoom: {walkthroughZoom.toFixed(2)}x</span>
+                  <button 
+                    onClick={() => setWalkthroughZoom(prev => Math.min(2, prev + 0.25))}
+                    className="bg-slate-900 border border-slate-800 hover:border-slate-700 text-white w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer font-bold text-xs"
+                  >
+                    +
+                  </button>
+                  <button 
+                    onClick={() => setWalkthroughZoom(prev => Math.max(0.5, prev - 0.25))}
+                    className="bg-slate-900 border border-slate-800 hover:border-slate-700 text-white w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer font-bold text-xs"
+                  >
+                    -
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Console & Controls */}
+            <div className="md:col-span-5 flex flex-col justify-between text-left space-y-4">
+              
+              {/* Room Selection */}
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Select Room view</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: 'lounge', label: '🌅 Living Lounge' },
+                    { key: 'bedroom', label: '🛌 Master Suite' },
+                    { key: 'kitchen', label: '🍳 Gourmet Kitchen' },
+                    { key: 'balcony', label: '🏊 View Deck' },
+                  ].map(r => (
+                    <button
+                      key={r.key}
+                      onClick={() => setWalkthroughRoom(r.key)}
+                      className={`p-3 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                        walkthroughRoom === r.key
+                          ? 'bg-emerald-600 border-emerald-500 text-white'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-750 text-slate-300'
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Lighting Mode Selector */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Lighting Environment</p>
+                  <span className="text-[9px] bg-slate-900 text-slate-400 border border-slate-800 px-2 py-0.5 rounded uppercase font-bold">
+                    {walkthroughNightMode ? 'Ambient LED' : 'Daylight Solar'}
+                  </span>
+                </div>
+                <div className="bg-slate-900 border border-slate-850 p-2.5 rounded-xl flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-350">Simulate Night Mode lighting</span>
+                  <button
+                    type="button"
+                    onClick={() => setWalkthroughNightMode(!walkthroughNightMode)}
+                    className={`w-11 h-6 rounded-full transition-colors relative focus:outline-none ${
+                      walkthroughNightMode ? 'bg-indigo-650' : 'bg-slate-700'
+                    }`}
+                  >
+                    <span className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${
+                      walkthroughNightMode ? 'right-1 translate-x-0' : 'left-1 translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Room Telemetry Log */}
+              <div className="bg-slate-900 border border-slate-850 rounded-2xl p-4 space-y-2.5">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Walkthrough Telemetry</p>
+                <div className="grid grid-cols-2 gap-3 text-[11px] font-mono">
+                  <div>
+                    <span className="text-slate-500 block leading-none">Ceiling Height</span>
+                    <span className="text-white font-bold block mt-1">10.8 Feet</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block leading-none">Luminosity Index</span>
+                    <span className="text-white font-bold block mt-1">
+                      {walkthroughNightMode ? '22% (Warm LED)' : '94% (Natural)'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block leading-none">Acoustic Shield</span>
+                    <span className="text-white font-bold block mt-1">-34 dB (Premium)</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block leading-none">Air Exchange Rate</span>
+                    <span className="text-white font-bold block mt-1">6.2 AirChanges/hr</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action */}
+              <div className="pt-2 border-t border-slate-900 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => alert(`Pre-booking interest registered for 3D layout of ${selected3DProperty.name}!`)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider py-3 px-6 rounded-xl flex-1 cursor-pointer transition-all text-center border-none shadow-md shadow-emerald-950/20"
+                >
+                  Confirm Structural Layout Interest
+                </button>
+              </div>
+
+            </div>
+
           </div>
         </div>
       )}

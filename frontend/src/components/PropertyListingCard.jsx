@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatCurrencyShort, formatDate } from '../utils/formatters';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
+import { useApp } from '../context/AppContext';
 
 const statusConfig = {
   'Under Construction': { color: 'text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30', dot: 'bg-amber-500 animate-pulse' },
   'Ready to Move': { color: 'text-emerald-700 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/30', dot: 'bg-emerald-500' },
   'Pre-Launch': { color: 'text-blue-700 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/30', dot: 'bg-blue-500' },
-  'Sold Out': { color: 'text-slate-700 bg-slate-50 dark:text-stone-400 dark:bg-stone-800/50 border-slate-200 dark:border-stone-705', dot: 'bg-slate-500' },
+  'Sold Out': { color: 'text-slate-700 bg-slate-50 dark:text-stone-400 dark:bg-stone-800/50 border-slate-205 dark:border-stone-705', dot: 'bg-slate-500' },
 };
 
 function StarRating({ value = 0 }) {
@@ -38,7 +39,8 @@ const generateTrendData = (minPrice, maxPrice, builderRating) => {
   });
 };
 
-export default function PropertyListingCard({ listing, index = 0, compareChecked = false, onToggleCompare, compareDisabled = false, matchPercentage }) {
+export default function PropertyListingCard({ listing, index = 0, compareChecked = false, onToggleCompare, compareDisabled = false, matchPercentage, onOpen3DView }) {
+  const { currentUser } = useApp();
   const [showForecaster, setShowForecaster] = useState(false);
   const sc = statusConfig[listing.status] || statusConfig['Under Construction'];
   const availableCount = listing.units?.filter(u => u.availability === 'Available').length;
@@ -147,6 +149,17 @@ export default function PropertyListingCard({ listing, index = 0, compareChecked
           >
             View Floor Plans →
           </Link>
+          
+          {currentUser && listing.status === 'Ready to Move' && (
+            <button
+              type="button"
+              onClick={() => onOpen3DView?.(listing)}
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider py-2.5 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              🕶️ 3D View
+            </button>
+          )}
+
           <button
             onClick={() => setShowForecaster(!showForecaster)}
             className="border border-slate-300 dark:border-stone-700 hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-stone-850 text-slate-700 dark:text-stone-300 text-xs font-bold uppercase tracking-wider py-2.5 px-3.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
