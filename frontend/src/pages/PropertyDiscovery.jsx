@@ -46,6 +46,66 @@ function possessionBucket(dateStr) {
   return '2y+';
 }
 
+function generateAiReport(projects) {
+  if (projects.length === 0) return null;
+  const reports = projects.map(p => {
+    const sold = p.salesData?.soldUnits || 0;
+    const total = p.totalUnits || 1;
+    const velocity = (sold / total) * 100;
+    let investmentGrade = 'B+';
+    let investmentText = 'Steady demand and reliable RERA tracking.';
+    if (velocity > 70) {
+      investmentGrade = 'A+';
+      investmentText = 'Extremely high demand and velocity. Scarcity pricing expected soon.';
+    } else if (velocity > 50) {
+      investmentGrade = 'A';
+      investmentText = 'Solid uptake. Good combination of risk and value.';
+    } else if (p.status === 'Ready to Move') {
+      investmentGrade = 'A-';
+      investmentText = 'Zero execution risk. Ideal for immediate rental yielding.';
+    }
+    
+    let pros = ['Premium infrastructure design', 'Strategic locality access'];
+    let cons = ['Higher price segment than local average'];
+    if (p.name.includes('Horizon') || p._id === 'proj-001') {
+      pros = ['Breathtaking panoramic sky views', 'Infinity pool & smart home features included'];
+      cons = ['Traffic during peak hours in Sector 74 corridor'];
+    } else if (p.name.includes('Serenity') || p._id === 'proj-002') {
+      pros = ['Low-density eco-friendly villa community', 'High privacy & private garden spaces'];
+      cons = ['Fewer public transport links nearby'];
+    } else if (p.name.includes('Pinnacle') || p._id === 'proj-003') {
+      pros = ['Bespoke helipad and private butler service', 'Calacatta marble finishes & wind-engineered façade'];
+      cons = ['Longer execution timeframe (Pre-Launch)', 'Highest absolute capital outlay'];
+    }
+
+    return {
+      _id: p._id,
+      name: p.name,
+      velocity: velocity.toFixed(0),
+      grade: investmentGrade,
+      text: investmentText,
+      pros,
+      cons
+    };
+  });
+
+  let recommendation = '';
+  if (projects.length === 1) {
+    recommendation = `CasaAI Advisor: ${projects[0].name} is a solid pick. We recommend verifying the builder RERA credentials.`;
+  } else if (projects.length === 2) {
+    const [p1, p2] = reports;
+    if (p1.grade === 'A+' || p1.grade === 'A') {
+      recommendation = `CasaAI Advisor: We recommend <strong>${p1.name}</strong> for investment growth potential, and <strong>${p2.name}</strong> if you prioritize lower entry pricing or immediate possession.`;
+    } else {
+      recommendation = `CasaAI Advisor: <strong>${p2.name}</strong> represents high market velocity, while <strong>${p1.name}</strong> is suitable for long-term luxury living.`;
+    }
+  } else {
+    recommendation = `CasaAI Advisor: For immediate yield/occupancy, choose <strong>Ready to Move</strong> projects. For maximum long-term capital appreciation, pre-launch options in key commercial sectors represent the highest ROI multiplier.`;
+  }
+
+  return { reports, recommendation };
+}
+
 export default function PropertyDiscovery() {
   const { projects, loading } = useProjects();
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,7 +117,116 @@ export default function PropertyDiscovery() {
   const [compareIds, setCompareIds] = useState([]);
   const [showCompare, setShowCompare] = useState(false);
 
+  const [aiQuery, setAiQuery] = useState('');
+  const [aiParsing, setAiParsing] = useState(false);
+  const [aiMessage, setAiMessage] = useState('');
+
   const enriched = useMemo(() => projects.map(enrichProject), [projects]);
+
+  const handleAiSearch = () => {
+    if (!aiQuery.trim()) return;
+    setAiParsing(true);
+    setAiMessage('CasaAI is parsing your search query...');
+    
+    setTimeout(() => {
+      const query = aiQuery.toLowerCase();
+      
+      // 1. Locality detection
+      let matchedLocality = 'all';
+      for (const loc of localities) {
+        if (query.includes(loc.toLowerCase())) {
+          matchedLocality = loc;
+          break;
+        }
+      }
+      if (matchedLocality === 'all') {
+        if (query.includes('noida')) matchedLocality = 'Noida';
+        else if (query.includes('gurugram') || query.includes('gurgaon')) matchedLocality = 'Gurugram';
+        else if (query.includes('mumbai')) matchedLocality = 'Mumbai';
+      }
+
+      // 2. Budget detection
+      let matchedBudget = MAX_BUDGET;
+      const crMatch = query.match(/(?:under|below|max|maximum|within)?\s*(\d+(?:\.\d+)?)\s*(?:cr|crore|crs)/);
+      const lMatch = query.match(/(?:under|below|max|maximum|within)?\s*(\d+(?:\.\d+)?)\s*(?:l|lakh|lakhs|lacs)/);
+      const numMatch = query.match(/(?:under|below|max|maximum|within)?\s*(\d{7,9})/);
+
+      if (crMatch) {
+        matchedBudget = parseFloat(crMatch[1]) * 10000000;
+      } else if (lMatch) {
+        matchedBudget = parseFloat(lMatch[1]) * 100000;
+      } else if (numMatch) {
+        matchedBudget = parseInt(numMatch[1]);
+      }
+
+      // 3. BHK detection
+      let matchedBhks = [];
+      if (query.includes('2bhk') || query.includes('2 bhk') || query.includes('2-bhk') || query.includes('2 bedroom')) {
+        matchedBhks.push('2BHK');
+      }
+      if (query.includes('3bhk') || query.includes('3 bhk') || query.includes('3-bhk') || query.includes('3 bedroom')) {
+        matchedBhks.push('3BHK');
+      }
+      if (query.includes('4bhk') || query.includes('4 bhk') || query.includes('4-bhk') || query.includes('4 bedroom')) {
+        matchedBhks.push('4BHK');
+      }
+
+      // 4. Possession detection
+      let matchedPossession = 'any';
+      if (query.includes('ready to move') || query.includes('ready') || query.includes('immediate')) {
+        matchedPossession = 'ready';
+      } else if (query.includes('1 year') || query.includes('1y') || query.includes('12 months')) {
+        matchedPossession = '1y';
+      } else if (query.includes('2 years') || query.includes('2y') || query.includes('24 months')) {
+        matchedPossession = '2y';
+      } else if (query.includes('future') || query.includes('2+ years') || query.includes('long term')) {
+        matchedPossession = '2y+';
+      }
+
+      // 5. Amenities detection
+      let matchedAmenities = [];
+      if (query.includes('pool') || query.includes('swimming')) {
+        matchedAmenities.push('Swimming Pool');
+      }
+      if (query.includes('gym') || query.includes('fitness')) {
+        matchedAmenities.push('Gym');
+      }
+      if (query.includes('club') || query.includes('clubhouse')) {
+        matchedAmenities.push('Clubhouse');
+      }
+      if (query.includes('tennis') || query.includes('court')) {
+        matchedAmenities.push('Tennis Court');
+      }
+      if (query.includes('hall') || query.includes('party')) {
+        matchedAmenities.push('Party Hall');
+      }
+      if (query.includes('co-working') || query.includes('office') || query.includes('work')) {
+        matchedAmenities.push('Co-working Space');
+      }
+
+      // Apply the filters
+      if (matchedLocality !== 'all') setLocality(matchedLocality);
+      if (matchedBudget !== MAX_BUDGET) setBudget(matchedBudget);
+      if (matchedBhks.length > 0) setSelectedBhk(matchedBhks);
+      if (matchedPossession !== 'any') setPossession(matchedPossession);
+      if (matchedAmenities.length > 0) setSelectedAmenities(matchedAmenities);
+
+      // Build the success summary message
+      let summaryParts = [];
+      if (matchedBhks.length > 0) summaryParts.push(matchedBhks.join('/'));
+      if (matchedLocality !== 'all') summaryParts.push(`in ${matchedLocality}`);
+      if (matchedBudget !== MAX_BUDGET) summaryParts.push(`under ${formatCurrencyShort(matchedBudget)}`);
+      if (matchedPossession !== 'any') {
+        const label = POSSESSION_OPTIONS.find(o => o.value === matchedPossession)?.label;
+        summaryParts.push(`(${label.toLowerCase()})`);
+      }
+      if (matchedAmenities.length > 0) summaryParts.push(`with ${matchedAmenities.join(', ')}`);
+
+      const summaryStr = summaryParts.join(' ');
+      setAiParsing(false);
+      setAiMessage(`✨ Filters applied: ${summaryStr || 'General Search'}`);
+    }, 1200);
+  };
 
   const localities = useMemo(
     () => Array.from(new Set(enriched.map(p => p.locality))).sort(),
@@ -116,14 +285,50 @@ export default function PropertyDiscovery() {
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-wider text-slate-900 dark:text-white">Find Your Home</h1>
           <p className="text-xs text-slate-500 dark:text-stone-400 mt-1">Filter registered premium towers by budget, layout, possession date, amenities, and locality.</p>
 
-          <div className="mt-5 max-w-xl">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by project name or locality…"
-              className="w-full text-sm bg-slate-50 dark:bg-stone-850 border border-slate-205 dark:border-stone-750 rounded-xl px-4 py-3 outline-none focus:border-slate-500 dark:focus:border-stone-500 transition-colors"
-            />
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+            <div className="text-left">
+              <label className="text-[10px] font-extrabold text-slate-500 dark:text-stone-400 uppercase tracking-widest block mb-2">Standard Search</label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by project name or locality…"
+                className="w-full text-sm bg-slate-50 dark:bg-stone-850 border border-slate-205 dark:border-stone-750 rounded-xl px-4 py-3 outline-none focus:border-slate-500 dark:focus:border-stone-500 transition-colors"
+              />
+            </div>
+            
+            <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-stone-900 dark:to-indigo-950 border border-indigo-900/35 rounded-2xl p-4 text-left relative overflow-hidden">
+              <div className="absolute inset-0 opacity-[0.04] bg-grid" />
+              <div className="relative z-10 flex flex-col sm:flex-row gap-3 items-end">
+                <div className="flex-1 w-full">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <span className="text-[9px] bg-indigo-500 text-white font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-md animate-pulse">CasaAI Smart Search</span>
+                    <span className="text-[9px] text-indigo-200 font-medium">Try natural language</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAiSearch()}
+                    placeholder="e.g. '3 BHK ready to move in Noida with gym'..."
+                    className="w-full text-xs font-semibold text-white bg-white/10 dark:bg-black/20 border border-white/15 dark:border-stone-750 rounded-xl px-3 py-2.5 outline-none placeholder-indigo-300/40 focus:border-indigo-400 dark:focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+                <button
+                  onClick={handleAiSearch}
+                  disabled={aiParsing || !aiQuery.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 border-none shadow-md shadow-indigo-950/30 transition-all cursor-pointer h-10 w-full sm:w-auto"
+                >
+                  {aiParsing ? 'Parsing...' : '✨ Ask AI'}
+                </button>
+              </div>
+              {aiMessage && (
+                <div className="mt-2 text-[9px] font-bold text-indigo-300 flex items-center gap-1.5 animate-fade-in">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
+                  {aiMessage}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -335,6 +540,73 @@ export default function PropertyDiscovery() {
                 </tbody>
               </table>
             </div>
+
+            {/* AI Advisor Section */}
+            {compareProjects.length > 0 && (
+              <div className="mt-8 border-t border-slate-200 dark:border-stone-850 pt-6 text-left">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-lg">✨</span>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">CasaAI Comparison Advisor</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                  {generateAiReport(compareProjects).reports.map(rep => (
+                    <div key={rep._id} className="bg-slate-50 dark:bg-stone-850 border border-slate-205 dark:border-stone-800 rounded-2xl p-4 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-stone-800 pb-2 mb-2">
+                          <p className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white truncate">{rep.name}</p>
+                          <span className={`text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                            rep.grade.startsWith('A+') ? 'bg-emerald-100 text-emerald-805 dark:bg-emerald-950/40 dark:text-emerald-400' :
+                            rep.grade.startsWith('A') ? 'bg-blue-105 text-blue-808 dark:bg-blue-950/40 dark:text-blue-400' :
+                            'bg-amber-105 text-amber-808 dark:bg-amber-950/40 dark:text-amber-400'
+                          }`}>
+                            {rep.grade}
+                          </span>
+                        </div>
+                        
+                        <p className="text-[10px] font-bold text-slate-500 dark:text-stone-300 leading-normal mb-3">{rep.text}</p>
+                        
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-[8px] font-black text-emerald-605 dark:text-emerald-400 uppercase tracking-widest mb-1">Pros</p>
+                            <ul className="space-y-1">
+                              {rep.pros.map((pro, i) => (
+                                <li key={i} className="text-[9px] font-bold text-slate-600 dark:text-stone-400 flex items-start gap-1">
+                                  <span className="text-emerald-500 font-sans">✓</span> {pro}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-[8px] font-black text-rose-605 dark:text-rose-400 uppercase tracking-widest mb-1">Cons</p>
+                            <ul className="space-y-1">
+                              {rep.cons.map((con, i) => (
+                                <li key={i} className="text-[9px] font-bold text-slate-600 dark:text-stone-400 flex items-start gap-1">
+                                  <span className="text-rose-500 font-sans">·</span> {con}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 pt-2 border-t border-slate-200/40 dark:border-stone-850 flex items-center justify-between">
+                        <span className="text-[8px] font-bold text-slate-400 dark:text-stone-500 uppercase tracking-wider">Demand Velocity</span>
+                        <span className="text-[10px] font-extrabold text-slate-800 dark:text-stone-200">{rep.velocity}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-gradient-to-r from-indigo-50 to-slate-50 dark:from-stone-900 dark:to-indigo-950/30 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-4 flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center text-sm flex-shrink-0">🤖</div>
+                  <div>
+                    <p className="text-[8px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-wider">CasaAI Advisor Recommendation</p>
+                    <p className="text-xs font-semibold text-slate-700 dark:text-indigo-205 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: generateAiReport(compareProjects).recommendation }} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

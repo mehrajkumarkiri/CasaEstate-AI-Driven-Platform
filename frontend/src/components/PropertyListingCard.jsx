@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatCurrencyShort, formatDate } from '../utils/formatters';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 
 const statusConfig = {
   'Under Construction': { color: 'text-amber-700 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/30', dot: 'bg-amber-500 animate-pulse' },
@@ -22,10 +24,27 @@ function StarRating({ value = 0 }) {
   );
 }
 
+const generateTrendData = (minPrice, maxPrice, builderRating) => {
+  const years = ['2026', '2027', '2028', '2029', '2030'];
+  const basePrice = ((minPrice || 6500000) + (maxPrice || 18500000)) / 2;
+  const growthRate = 0.08 + (builderRating || 4.3) * 0.01;
+  
+  return years.map((year, i) => {
+    const multiplier = Math.pow(1 + growthRate, i);
+    return {
+      year,
+      price: Math.round((basePrice * multiplier) / 100000) / 100,
+    };
+  });
+};
+
 export default function PropertyListingCard({ listing, index = 0, compareChecked = false, onToggleCompare, compareDisabled = false }) {
+  const [showForecaster, setShowForecaster] = useState(false);
   const sc = statusConfig[listing.status] || statusConfig['Under Construction'];
   const availableCount = listing.units?.filter(u => u.availability === 'Available').length;
   const totalUnitsKnown = listing.units?.length;
+
+  const trendData = generateTrendData(listing.priceRange?.min, listing.priceRange?.max, listing.builderRating);
 
   return (
     <div className="group relative bg-white dark:bg-stone-900 border border-slate-205 dark:border-stone-800 rounded-2xl overflow-hidden flex flex-col hover:border-slate-400 dark:hover:border-stone-600 transition-all duration-300 hover:-translate-y-1 text-left">
@@ -119,7 +138,65 @@ export default function PropertyListingCard({ listing, index = 0, compareChecked
           >
             View Floor Plans →
           </Link>
+          <button
+            onClick={() => setShowForecaster(!showForecaster)}
+            className="border border-slate-300 dark:border-stone-700 hover:border-slate-500 hover:bg-slate-50 dark:hover:bg-stone-850 text-slate-700 dark:text-stone-300 text-xs font-bold uppercase tracking-wider py-2.5 px-3.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            📈 {showForecaster ? 'Hide' : 'AI Trend'}
+          </button>
         </div>
+
+        {showForecaster && (
+          <div className="mt-4 border-t border-slate-200 dark:border-stone-850 pt-4 animate-fade-in text-left">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-[8px] font-extrabold text-slate-400 dark:text-stone-500 uppercase tracking-widest leading-none">5-Year AI Forecast</p>
+                <p className="text-[10px] text-slate-500 dark:text-stone-400 mt-0.5">Est. Avg. Valuation (Cr)</p>
+              </div>
+              <div className="bg-indigo-55 dark:bg-indigo-950/30 border border-indigo-150 dark:border-indigo-900/50 rounded-lg px-2 py-1 text-right">
+                <p className="text-[8px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wider leading-none">Confidence</p>
+                <p className="text-xs font-black text-indigo-650 dark:text-indigo-300 leading-tight mt-0.5">{(85 + (listing.builderRating || 4.3) * 2.5).toFixed(0)}%</p>
+              </div>
+            </div>
+            
+            <div className="h-32 w-full mt-2 select-none">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={`colorPrice-${listing._id}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="year" 
+                    tick={{ fontSize: 9, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 9, fill: '#94a3b8' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-slate-900 dark:bg-stone-800 text-white p-2 rounded-lg border border-slate-700 dark:border-stone-700 text-[10px] font-bold">
+                            <p>{payload[0].payload.year}: {payload[0].value.toFixed(2)} Cr</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Area type="monotone" dataKey="price" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill={`url(#colorPrice-${listing._id})`} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
