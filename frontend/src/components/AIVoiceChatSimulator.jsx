@@ -75,6 +75,21 @@ export default function AIVoiceChatSimulator() {
     });
   };
 
+  const getMockReply = (queryText) => {
+    const q = queryText.toLowerCase();
+    if (q.includes('curing') || q.includes('moisture') || q.includes('strength') || q.includes('concrete')) {
+      return "Noida Tower A utilizes M40 self-compacting concrete with Fe550 reinforcement bars. Telemetry sensors confirm curing has reached 98.4% of the target 28-day threshold, showing optimal moisture.";
+    } else if (q.includes('delay') || q.includes('schedule') || q.includes('mep') || q.includes('variance')) {
+      return "Noida Tower B MEP works are stable with a schedule variance of +1.2 days. Finishes are slightly delayed but fully cushioned by inventory reserves, keeping the overall project on track.";
+    } else if (q.includes('rera') || q.includes('license') || q.includes('permit') || q.includes('number')) {
+      return "RERA registration details: Noida (UP-RERA-2026-REG-88209), Gurugram (HR-RERA-2026-REG-74011), Worli Mumbai (MH-RERA-2026-REG-10925). Status: Active & Sanctioned.";
+    } else if (q.includes('budget') || q.includes('cost') || q.includes('spent') || q.includes('variance') || q.includes('audit')) {
+      return "Noida Tower A spent ledger stands at ₹4.2 Crore against a projected ₹4.5 Crore baseline, yielding a positive cost variance of -₹30 Lakhs due to early supplier procurement locks.";
+    } else {
+      return `I have logged your request: "${queryText}". CasaAI is auditing the site databases. All structures are currently verified stable and compliant under active RERA filings.`;
+    }
+  };
+
   const submitQuery = async (queryText) => {
     if (!queryText.trim()) return;
 
@@ -96,26 +111,28 @@ export default function AIVoiceChatSimulator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: queryText, customApiKey: activeKey })
       });
+      if (!response.ok) throw new Error('API server returned error');
       const data = await response.json();
+      if (!data.reply) throw new Error('Empty reply');
       
-      if (activeTab === 'call') {
-        // Voice response
-        setMessages(prev => [
-          ...prev,
-          { sender: 'bot', text: `[AI Voice Response] ${data.reply}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-        ]);
-        setCallStatus('Connected');
-      } else {
-        // Chat response
-        setMessages(prev => [
-          ...prev,
-          { sender: 'bot', text: data.reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-        ]);
-      }
+      setTimeout(() => {
+        if (activeTab === 'call') {
+          setMessages(prev => [
+            ...prev,
+            { sender: 'bot', text: `[AI Voice Response] ${data.reply}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+          ]);
+          setCallStatus('Connected');
+        } else {
+          setMessages(prev => [
+            ...prev,
+            { sender: 'bot', text: data.reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+          ]);
+        }
+      }, 600);
     } catch {
       // Offline fallback
       setTimeout(() => {
-        let reply = "All construction works managed by CasaEstate carry certified registrations under RERA: Noida (UP-RERA-2026-REG-88209), Gurugram (HR-RERA-2026-REG-74011), Mumbai (MH-RERA-2026-REG-10925). Noida Tower A curing has reached 98.4% strength.";
+        const reply = getMockReply(queryText);
         if (activeTab === 'call') {
           setMessages(prev => [
             ...prev,
@@ -128,9 +145,9 @@ export default function AIVoiceChatSimulator() {
             { sender: 'bot', text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
           ]);
         }
-      }, 1000);
+      }, 800);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 800);
     }
   };
 
