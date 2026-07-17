@@ -172,6 +172,7 @@ export default function Home() {
       title: '💎 Portal Selected',
       message: 'Logged in as Client. You can now browse properties & simulate AI tools.'
     });
+    navigate('/properties');
   };
 
   const selectResident = () => {
@@ -316,6 +317,31 @@ export default function Home() {
       </section>
 
 
+
+      {/* 🏘️ Featured Properties + Discovery Entry Point */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#f4f4f3] dark:bg-stone-950 text-left border-b border-slate-205 dark:border-stone-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest mb-1">Registered Towers</p>
+              <h2 className="text-2xl font-black uppercase tracking-wider text-slate-900 dark:text-white mt-1">Featured Properties</h2>
+              <p className="text-xs text-slate-500 dark:text-stone-400 mt-1">A snapshot of live listings — filter by budget, BHK, possession date, amenities, and locality.</p>
+            </div>
+            <Link
+              to="/properties"
+              className="btn-primary inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider py-2.5 px-5 rounded-xl whitespace-nowrap"
+            >
+              Browse All & Filter →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredProjects.slice(0, 3).map((proj, idx) => (
+              <ProjectCard key={proj._id} project={proj} index={idx} />
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* 👥 Segregated Operational Hub */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-stone-900 text-left border-b border-slate-205 dark:border-stone-800">

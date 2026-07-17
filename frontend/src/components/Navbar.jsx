@@ -31,6 +31,7 @@ export default function Navbar() {
   const getNavLinks = () => {
     const links = [
       { label: 'Browse Estates', path: '/', icon: '🏙️' },
+      { label: 'Buy a Home', path: '/properties', icon: '🔎' },
       { label: 'Deals Room', path: '/deals', icon: '💎' },
       { label: 'Casa AI', path: '/dashboard', icon: '⚙️' }
     ];

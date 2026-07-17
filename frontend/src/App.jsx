@@ -5,6 +5,7 @@ import NotificationToast from './components/NotificationToast';
 import CasaBotWidget from './components/CasaBotWidget';
 import Home from './pages/Home';
 import Deals from './pages/Deals';
+import PropertyDiscovery from './pages/PropertyDiscovery';
 import ProjectDetail from './pages/ProjectDetail';
 import ResidentPortal from './pages/ResidentPortal';
 import AdminDashboard from './pages/AdminDashboard';
@@ -43,6 +44,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/deals" element={<Deals />} />
+              <Route path="/properties" element={<PropertyDiscovery />} />
               <Route path="/login" element={<Login />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route 
