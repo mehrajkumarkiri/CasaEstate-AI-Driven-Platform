@@ -91,6 +91,14 @@ export default function BookingForm() {
   // Atomic database lock countdown timer (10 mins)
   const [timeLeft, setTimeLeft] = useState(600);
 
+  const [showLayoutDesigner, setShowLayoutDesigner] = useState(false);
+  const [showLoanAdvisor, setShowLoanAdvisor] = useState(false);
+  const [customLayout, setCustomLayout] = useState('Standard');
+  const [loanDownpayment, setLoanDownpayment] = useState(20);
+  const [loanTenure, setLoanTenure] = useState(20);
+  const [buyerSalary, setBuyerSalary] = useState(200000);
+
+
   useEffect(() => {
     if (!open || submitted) return;
     setTimeLeft(600);
@@ -307,9 +315,201 @@ export default function BookingForm() {
             </div>
           )}
 
+          {unit && !submitted && (
+            <div className="bg-slate-50 dark:bg-stone-850 border border-slate-205 dark:border-stone-750 rounded-xl overflow-hidden text-left">
+              <button
+                type="button"
+                onClick={() => setShowLayoutDesigner(!showLayoutDesigner)}
+                className="w-full px-4 py-3 flex items-center justify-between text-xs font-bold text-slate-800 dark:text-stone-200 hover:bg-slate-100 dark:hover:bg-stone-800 transition-colors"
+              >
+                <span>✨ AI Floor Plan Customizer</span>
+                <span>{showLayoutDesigner ? '−' : '+'}</span>
+              </button>
+              
+              {showLayoutDesigner && (
+                <div className="p-4 border-t border-slate-200 dark:border-stone-800 space-y-3 animate-fade-in">
+                  <div className="flex gap-2">
+                    {[
+                      { label: 'Standard', value: 'Standard' },
+                      { label: 'Home Office', value: 'Office' },
+                      { label: 'Expanded Lounge', value: 'Lounge' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setCustomLayout(opt.value)}
+                        className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer ${
+                          customLayout === opt.value
+                            ? 'bg-slate-900 border-slate-900 text-white dark:bg-white dark:border-white dark:text-stone-950 shadow-xs'
+                            : 'bg-white dark:bg-stone-905 border-slate-200 dark:border-stone-800 text-slate-500 hover:border-slate-300 dark:hover:border-stone-700'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <svg viewBox="0 0 100 70" className="w-full h-24 text-indigo-500 dark:text-indigo-400 stroke-current bg-slate-950 border border-slate-800 rounded-xl p-2" fill="none" strokeWidth="0.8">
+                    <rect x="5" y="5" width="90" height="60" rx="1" stroke="#475569" />
+                    {customLayout === 'Standard' && (
+                      <>
+                        <line x1="45" y1="5" x2="45" y2="65" />
+                        <line x1="5" y1="35" x2="45" y2="35" />
+                        <text x="10" y="22" className="fill-current stroke-none text-[4px] font-sans font-bold">BEDROOM</text>
+                        <text x="10" y="52" className="fill-current stroke-none text-[4px] font-sans font-bold">KITCHEN</text>
+                        <text x="58" y="37" className="fill-current stroke-none text-[4px] font-sans font-bold">LIVING ROOM</text>
+                      </>
+                    )}
+                    {customLayout === 'Office' && (
+                      <>
+                        <line x1="45" y1="5" x2="45" y2="65" />
+                        <line x1="5" y1="35" x2="45" y2="35" />
+                        <line x1="25" y1="5" x2="25" y2="35" strokeDasharray="1.5 1.5" className="text-indigo-400" />
+                        <text x="8" y="22" className="fill-current stroke-none text-[3.5px] font-sans font-bold">OFFICE</text>
+                        <text x="28" y="22" className="fill-current stroke-none text-[3.5px] font-sans font-bold">BEDROOM</text>
+                        <text x="10" y="52" className="fill-current stroke-none text-[4px] font-sans font-bold">KITCHEN</text>
+                        <text x="58" y="37" className="fill-current stroke-none text-[4px] font-sans font-bold">LIVING ROOM</text>
+                      </>
+                    )}
+                    {customLayout === 'Lounge' && (
+                      <>
+                        <line x1="45" y1="5" x2="45" y2="65" />
+                        <line x1="5" y1="35" x2="45" y2="35" />
+                        <line x1="45" y1="20" x2="95" y2="20" strokeDasharray="2 2" className="text-emerald-400" />
+                        <text x="10" y="22" className="fill-current stroke-none text-[4px] font-sans font-bold">BEDROOM</text>
+                        <text x="10" y="52" className="fill-current stroke-none text-[4px] font-sans font-bold">KITCHEN</text>
+                        <text x="53" y="42" className="fill-current stroke-none text-[4px] font-sans font-bold">EXPANDED LOUNGE</text>
+                      </>
+                    )}
+                  </svg>
+                  
+                  <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-stone-400 font-bold uppercase">
+                    <span>Usable Carpet Area</span>
+                    <span className="text-slate-800 dark:text-stone-200">
+                      {customLayout === 'Standard' ? `${unit.carpetArea} sq.ft` :
+                       customLayout === 'Office' ? `${unit.carpetArea - 20} sq.ft (partitions used)` :
+                       `${unit.carpetArea + 40} sq.ft (balcony integrated)`}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {unit && !submitted && (
+            <div className="bg-slate-50 dark:bg-stone-850 border border-slate-205 dark:border-stone-750 rounded-xl overflow-hidden text-left">
+              <button
+                type="button"
+                onClick={() => setShowLoanAdvisor(!showLoanAdvisor)}
+                className="w-full px-4 py-3 flex items-center justify-between text-xs font-bold text-slate-800 dark:text-stone-200 hover:bg-slate-100 dark:hover:bg-stone-800 transition-colors"
+              >
+                <span>🏦 AI Bank Loan & EMI Advisor</span>
+                <span>{showLoanAdvisor ? '−' : '+'}</span>
+              </button>
+              
+              {showLoanAdvisor && (
+                <div className="p-4 border-t border-slate-200 dark:border-stone-800 space-y-4 animate-fade-in text-left">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest block mb-1">Downpayment — {loanDownpayment}%</label>
+                      <input
+                        type="range"
+                        min={10}
+                        max={80}
+                        step={5}
+                        value={loanDownpayment}
+                        onChange={(e) => setLoanDownpayment(Number(e.target.value))}
+                        className="w-full accent-slate-900 dark:accent-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest block mb-1">Tenure — {loanTenure} Years</label>
+                      <select
+                        value={loanTenure}
+                        onChange={(e) => setLoanTenure(Number(e.target.value))}
+                        className="w-full text-xs font-semibold bg-white dark:bg-stone-900 border border-slate-200 dark:border-stone-750 rounded-lg px-2 py-1 outline-none mt-1"
+                      >
+                        {[10, 15, 20, 25, 30].map(yr => <option key={yr} value={yr}>{yr} Years</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[9px] font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest block mb-1">Applicant Monthly Income</label>
+                    <input
+                      type="number"
+                      value={buyerSalary}
+                      onChange={(e) => setBuyerSalary(Number(e.target.value))}
+                      className="w-full bg-white dark:bg-stone-900 border border-slate-250 dark:border-stone-750 text-slate-900 dark:text-white placeholder-slate-400 text-xs rounded-lg px-3 py-1.5 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="bg-slate-900 dark:bg-black/40 text-white border border-stone-800 rounded-xl p-4 space-y-2 text-xs">
+                    <div className="flex justify-between text-[10px] text-slate-400 uppercase font-black tracking-wider">
+                      <span>Principal Loan amount</span>
+                      <span>{formatCurrency(Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)))}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 uppercase font-black tracking-wider">
+                      <span>Estimated EMI @ 8.4%</span>
+                      <span className="font-bold text-indigo-400 font-display text-sm">
+                        {formatCurrency(Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ))} / mo
+                      </span>
+                    </div>
+                    
+                    <div className="border-t border-stone-800 pt-2.5 flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Debt Ratio (EMI/Income)</span>
+                      <span className="font-bold">
+                        {((Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ) / buyerSalary) * 100).toFixed(0)}%
+                      </span>
+                    </div>
+
+                    <div className="mt-2.5 pt-2 border-t border-stone-800 flex gap-2 items-start">
+                      <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                        ((Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ) / buyerSalary) * 100) > 60 ? 'bg-rose-500 text-white' :
+                        ((Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ) / buyerSalary) * 100) > 45 ? 'bg-amber-500 text-stone-950' : 'bg-emerald-500 text-white'
+                      }`}>
+                        {((Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ) / buyerSalary) * 100) > 60 ? 'High Risk' :
+                        ((Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ) / buyerSalary) * 100) > 45 ? 'Medium Risk' : 'Low Risk'}
+                      </span>
+                      <p className="text-[10px] text-slate-350 font-semibold leading-relaxed">
+                        {((Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ) / buyerSalary) * 100) > 60 ? 'Debt ratio exceeds 60%. We recommend increasing downpayment to secure approval.' :
+                        ((Math.round(
+                          (Math.round((unit?.pricing?.basePrice * (1 + (unit?.pricing?.gst || 5)/100) + 200000) * (1 - loanDownpayment / 100)) * (0.084/12) * Math.pow(1 + (0.084/12), loanTenure * 12)) / 
+                          (Math.pow(1 + (0.084/12), loanTenure * 12) - 1)
+                        ) / buyerSalary) * 100) > 45 ? 'Medium debt ratio. Requires co-applicant endorsement for immediate bank sanction.' : 'Low debt-to-income ratio. Pre-qualified across HDFC, SBI, and ICICI.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {!submitted ? (
             <>
               <StepIndicator current={step} />
+
 
               {/* Step 0: Applicant Details */}
               {step === 0 && (

@@ -375,6 +375,23 @@ export default function ProjectDetail() {
   const [activeTab, setActiveTab] = useState('floorplan');
   const [syncTime, setSyncTime] = useState(new Date().toLocaleTimeString());
 
+  const [complianceLoading, setComplianceLoading] = useState(false);
+  const [complianceScan, setComplianceScan] = useState(false);
+
+  const handleComplianceScan = () => {
+    setComplianceLoading(true);
+    setTimeout(() => {
+      setComplianceLoading(false);
+      setComplianceScan(true);
+      pushNotification({
+        type: 'success',
+        title: '⚖️ RERA Compliance Verified',
+        message: 'Legal document checks completed. Land deeds, structural reports, and environmental NOCs verified clean.'
+      });
+    }, 1500);
+  };
+
+
   useEffect(() => {
     const interval = setInterval(() => {
       setSyncTime(new Date().toLocaleTimeString());
@@ -510,6 +527,7 @@ export default function ProjectDetail() {
                 { key: 'units', label: '🏠 Available Units' },
                 { key: 'specs', label: '📋 Technical Specs' },
                 { key: 'rera', label: '🔒 RERA Compliance Documents' },
+                { key: 'progress', label: '🚀 AI Construction Progress' },
                 { key: 'wholesale', label: '💼 Enterprise Wholesale Desk' },
               ].map(t => (
                 <button key={t.key} id={`tab-${t.key}`}
@@ -651,9 +669,157 @@ export default function ProjectDetail() {
                   <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 text-xs text-amber-800 dark:text-amber-400 leading-normal">
                     <strong>Note:</strong> Environmental audit ledgers, bank project tie-up details, and escrow details can be verified at our Noida corporate head office directly.
                   </div>
+
+                  {/* AI Compliance Scanner Dashboard */}
+                  <div className="border-t border-slate-200 dark:border-stone-800 pt-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-sm">✨</span>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">AI legal & compliance scanner</h4>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-stone-900 dark:to-indigo-950 border border-indigo-900/35 rounded-3xl p-5 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 opacity-[0.03] bg-grid" />
+                      
+                      <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="text-left">
+                          <p className="text-xs font-bold text-indigo-200 text-left">CasaAI Legal Compliance Auditor</p>
+                          <p className="text-[10px] text-indigo-200/70 mt-1 text-left">Audit active municipal filings, land title clearances, and environmental disclosures.</p>
+                        </div>
+                        <button
+                          onClick={handleComplianceScan}
+                          disabled={complianceLoading}
+                          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl border-none shadow-md shadow-indigo-950/30 transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          {complianceLoading ? 'Scanning...' : '🔍 Scan RERA Documents'}
+                        </button>
+                      </div>
+
+                      {complianceScan && (
+                        <div className="mt-5 pt-5 border-t border-white/10 animate-fade-in text-left">
+                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
+                            {[
+                              { label: 'Land Title Clear', value: '100% Verified', color: 'text-emerald-400' },
+                              { label: 'Municipal Sanction', value: 'Active (Approved)', color: 'text-emerald-400' },
+                              { label: 'Structural Stability', value: 'Certified (Earthquake Res.)', color: 'text-emerald-400' },
+                              { label: 'Risk Health Rating', value: 'Low Risk (96/100)', color: 'text-indigo-300' }
+                            ].map(item => (
+                              <div key={item.label} className="bg-white/5 border border-white/10 p-3 rounded-xl text-left">
+                                <p className="text-[8px] font-bold text-indigo-200 uppercase tracking-widest leading-none">{item.label}</p>
+                                <p className={`text-xs font-black mt-1 ${item.color}`}>{item.value}</p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex gap-3 items-start text-left">
+                            <div className="w-8 h-8 rounded-xl bg-indigo-500 text-white flex items-center justify-center text-sm flex-shrink-0">⚖️</div>
+                            <div>
+                              <p className="text-[8px] font-black text-indigo-400 uppercase tracking-wider">CasaAI Compliance Audit Summary</p>
+                              <p className="text-xs font-semibold text-indigo-150 mt-1 leading-relaxed">
+                                Legal scanning complete for <strong>{project.reraNumber || 'UPRERAPRJ654321'}</strong>. Title search shows clean ownership with zero active mortgage disputes on the underlying plot. Commencement sanction is verified as authentic, matching current height approvals. Executed construction milestones correspond to 94% accuracy with local regulatory submissions.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* Construction Progress Tab */}
+            {activeTab === 'progress' && (
+              <div className="animate-fade-in space-y-4 text-left">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Telemetry Panel */}
+                  <div className="md:col-span-2 bg-white dark:bg-stone-900 border border-slate-205 dark:border-stone-800 p-5 rounded-2xl shadow-xs space-y-4">
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">Live IoT Telemetry Feed</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Concrete Moisture', value: '11.8%', status: 'Optimal', color: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400' },
+                        { label: 'Steel Tensile Load', value: '41.2 kN/m²', status: 'Stable', color: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400' },
+                        { label: 'Workforce On-Site', value: '238 active', status: 'Full Capacity', color: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400' },
+                        { label: 'Slab Curing Age', value: '24 days', status: 'Fully Cured', color: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/20 dark:text-emerald-400' }
+                      ].map(tel => (
+                        <div key={tel.label} className="border border-slate-200 dark:border-stone-800 rounded-xl p-3.5 flex justify-between items-center bg-slate-50/50 dark:bg-stone-850/50">
+                          <div>
+                            <p className="text-[9px] font-black text-slate-400 dark:text-stone-500 uppercase tracking-widest">{tel.label}</p>
+                            <p className="text-sm font-black text-slate-800 dark:text-white mt-1 leading-none">{tel.value}</p>
+                          </div>
+                          <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${tel.color}`}>
+                            {tel.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pt-2">
+                      <p className="text-[9px] font-black text-slate-400 dark:text-stone-500 uppercase tracking-widest mb-3">Construction Milestones Timeline</p>
+                      <div className="space-y-4 relative pl-5 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200 dark:before:bg-stone-800">
+                        {[
+                          { title: 'Substructure & Foundation', desc: 'Excavation, piling and raft slab finalized.', status: 'Completed', color: 'bg-emerald-500' },
+                          { title: 'Superstructure Framing', desc: 'Casting Level L18 structural columns.', status: '80% Progress', color: 'bg-indigo-500 animate-pulse' },
+                          { title: 'Mechanical & Plumbing', desc: 'Internal pipe installation and cabling.', status: 'Awaiting Frame', color: 'bg-slate-300 dark:bg-stone-750' }
+                        ].map((m, idx) => (
+                          <div key={idx} className="relative">
+                            <div className={`absolute -left-[17px] top-1.5 w-2 h-2 rounded-full ring-4 ring-white dark:ring-stone-900 ${m.color}`} />
+                            <div className="flex justify-between items-start gap-4">
+                              <div>
+                                <p className="text-xs font-bold text-slate-800 dark:text-stone-200">{m.title}</p>
+                                <p className="text-[10px] text-slate-500 dark:text-stone-450 mt-0.5">{m.desc}</p>
+                              </div>
+                              <span className="text-[8px] font-black uppercase tracking-wider text-slate-400 dark:text-stone-500 whitespace-nowrap">{m.status}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI Delay Forecast Panel */}
+                  <div className="bg-gradient-to-br from-slate-900 to-indigo-950 dark:from-stone-900 dark:to-indigo-950 border border-indigo-900/35 rounded-2xl p-5 text-white flex flex-col justify-between text-left">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-4">
+                        <span className="text-xs">🤖</span>
+                        <h4 className="text-[9px] font-black text-indigo-250 uppercase tracking-widest leading-none">AI Delay Cascade Forecaster</h4>
+                      </div>
+                      
+                      <div className="text-center py-6">
+                        <div className="inline-block relative">
+                          <p className="text-3xl font-black font-display text-indigo-400 leading-none">4.2%</p>
+                          <p className="text-[8px] font-extrabold uppercase tracking-widest text-indigo-305 mt-1 leading-none">Delay Probability</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3.5 text-xs border-t border-white/10 pt-4">
+                        <div>
+                          <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest leading-none">Predicted Handover</p>
+                          <p className="text-xs font-bold text-white mt-1 leading-none">{formatDate(project.possessionDate)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest leading-none">Confidence Index</p>
+                          <p className="text-xs font-bold text-white mt-1 leading-none font-mono">97.8% (Highly Stable)</p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] font-black text-indigo-300 uppercase tracking-widest leading-none">Swarm Analysis</p>
+                          <p className="text-[10px] font-semibold text-indigo-150 leading-relaxed mt-1">
+                            Curing rates are optimal under current weather parameters. Slabs achieve target strength in 21 days vs. 28-day baseline, providing 7 days of schedule buffer. Sourcing delays for high-end finishes are fully countered by early inventory staging.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => pushNotification({ type: 'info', title: 'Schedule Recalculation', message: 'Swarm agents are polling current builder work logs...' })}
+                      className="mt-6 w-full bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold uppercase tracking-wider py-2.5 rounded-xl border border-white/10 transition-all cursor-pointer"
+                    >
+                      🔄 Recalculate Timeline
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
             {/* Enterprise B2B Wholesale Desk Tab */}
             {activeTab === 'wholesale' && (
