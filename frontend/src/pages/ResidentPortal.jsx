@@ -349,6 +349,59 @@ export default function ResidentPortal() {
   const [newTicketTitle, setNewTicketTitle] = useState('');
   const [newTicketCat, setNewTicketCat] = useState('Plumbing Service');
 
+  const [aiClassification, setAiClassification] = useState(null);
+  const [isClassifying, setIsClassifying] = useState(false);
+
+  const handleAIClassify = () => {
+    if (!newTicketTitle.trim()) return;
+    setIsClassifying(true);
+    
+    setTimeout(() => {
+      const text = newTicketTitle.toLowerCase();
+      let category = 'Plumbing Service';
+      let priority = 'Standard';
+      let technician = 'Rajiv Sen (Plumber)';
+      let sla = '24 Hours';
+      
+      if (text.includes('spark') || text.includes('wire') || text.includes('current') || text.includes('short circuit') || text.includes('shock') || text.includes('electrical') || text.includes('power')) {
+        category = 'Electrical Repair';
+        priority = 'Urgent Hazard';
+        technician = 'Suresh Nair (Electrical Specialist)';
+        sla = '30 Minutes';
+      } else if (text.includes('lift') || text.includes('elevator') || text.includes('escalator')) {
+        category = 'Common Area Lift';
+        priority = 'High Priority';
+        technician = 'Manish Verma (OTIS Technician)';
+        sla = '2 Hours';
+      } else if (text.includes('leak') || text.includes('water') || text.includes('seepage') || text.includes('pipe') || text.includes('tap')) {
+        category = 'Plumbing Service';
+        priority = 'High Priority';
+        technician = 'Kiran Patil (Plumber Master)';
+        sla = '4 Hours';
+      } else if (text.includes('guard') || text.includes('theft') || text.includes('stranger') || text.includes('security') || text.includes('gate') || text.includes('fight')) {
+        category = 'Security Violation';
+        priority = 'Urgent Hazard';
+        technician = 'Commander Singh (Security Chief)';
+        sla = '15 Minutes';
+      } else {
+        category = 'Housekeeping Unit';
+        priority = 'Standard';
+        technician = 'Gita Bai (Housekeeping Supervisor)';
+        sla = '12 Hours';
+      }
+      
+      setAiClassification({ category, priority, technician, sla });
+      setNewTicketCat(category);
+      setIsClassifying(false);
+      pushNotification({
+        type: 'info',
+        title: '🤖 CasaAI Dispatch Routing',
+        message: `Routed to ${technician}. Priority: ${priority}. SLA: ${sla}.`
+      });
+    }, 1000);
+  };
+
+
   // Construction Progress state
   const [constructionMilestones, setConstructionMilestones] = useState([]);
   const [constructionSummary, setConstructionSummary] = useState(null);
@@ -386,10 +439,11 @@ export default function ResidentPortal() {
     };
     setTickets([newT, ...tickets]);
     setNewTicketTitle('');
+    setAiClassification(null);
     pushNotification({
       type: 'success',
       title: '✓ Complaint Logged',
-      message: 'Assigned to Facility Head Ms. Shalini Sharma. Redressal timeline: 24 hours.'
+      message: `Assigned to ${aiClassification ? aiClassification.technician : 'Facility Head'}. Redressal SLA: ${aiClassification ? aiClassification.sla : '24 hours'}.`
     });
   };
 
@@ -467,12 +521,13 @@ export default function ResidentPortal() {
                 className={`text-xs font-bold uppercase tracking-wider px-4 py-3.5 border-b-2 transition-all -mb-px whitespace-nowrap ${
                   activeTab === tab.key
                     ? 'text-slate-900 dark:text-white border-slate-900 dark:border-white'
-                    : 'text-slate-500 border-transparent hover:text-slate-900 dark:hover:text-stone-200'
+                    : 'text-slate-500 border-transparent hover:text-slate-950 dark:hover:text-stone-250'
                 }`}
               >
-                {t.label}
+                {tab.label}
               </button>
             ))}
+
           </div>
         </div>
 
@@ -534,10 +589,42 @@ export default function ResidentPortal() {
                       className="w-full bg-slate-50 dark:bg-stone-800 border border-slate-205 dark:border-stone-750 text-slate-900 dark:text-white text-xs rounded-xl px-4 py-2.5"
                     />
                   </div>
+
+                  {/* AI Router Preview Panel */}
+                  {newTicketTitle.trim() && (
+                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-stone-900 dark:to-indigo-950 border border-indigo-900/35 rounded-2xl p-4 text-white relative overflow-hidden text-left">
+                      <div className="absolute inset-0 opacity-[0.03] bg-grid" />
+                      <div className="relative z-10 flex items-center justify-between gap-4">
+                        <div className="text-left">
+                          <p className="text-[9px] font-black text-indigo-305 uppercase tracking-widest leading-none">AI Dispatch Router</p>
+                          {aiClassification ? (
+                            <div className="mt-2 space-y-1 text-xs">
+                              <p className="text-left">Routed Category: <strong className="text-white font-bold">{aiClassification.category}</strong></p>
+                              <p className="text-left">Priority Tier: <strong className="text-amber-400 font-bold">{aiClassification.priority}</strong></p>
+                              <p className="text-left">Technician: <strong className="text-white font-bold">{aiClassification.technician}</strong></p>
+                              <p className="text-left">SLA Resolution: <strong className="text-emerald-400 font-bold">{aiClassification.sla}</strong></p>
+                            </div>
+                          ) : (
+                            <p className="text-[10px] text-indigo-200/70 mt-1 text-left">Let CasaAI read your description to classify category and assign optimal SLA.</p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAIClassify}
+                          disabled={isClassifying}
+                          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-lg border-none shadow-md shadow-indigo-950/30 transition-all cursor-pointer whitespace-nowrap"
+                        >
+                          {isClassifying ? 'Classifying...' : '⚡ Classify & Route'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <button type="submit" className="btn-primary text-xs font-bold uppercase tracking-wider py-2.5">
                     File Complaint Ticket
                   </button>
                 </form>
+
 
                 {/* Tickets queue */}
                 <div className="border-t border-slate-100 dark:border-stone-800 pt-4 space-y-3">

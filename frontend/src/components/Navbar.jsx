@@ -30,7 +30,7 @@ export default function Navbar() {
   // Get dynamic navigation links based on user role
   const getNavLinks = () => {
     const links = [
-      { label: 'Browse Estates', path: '/', icon: '🏙️' },
+      { label: 'Browse Estates', path: '/properties', icon: '🏙️' },
       { label: 'Deals Room', path: '/deals', icon: '💎' },
       { label: 'Casa AI', path: '/dashboard', icon: '⚙️' }
     ];

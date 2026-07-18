@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Navbar from './components/Navbar';
@@ -5,6 +6,7 @@ import NotificationToast from './components/NotificationToast';
 import CasaBotWidget from './components/CasaBotWidget';
 import Home from './pages/Home';
 import Deals from './pages/Deals';
+import PropertyDiscovery from './pages/PropertyDiscovery';
 import ProjectDetail from './pages/ProjectDetail';
 import ResidentPortal from './pages/ResidentPortal';
 import AdminDashboard from './pages/AdminDashboard';
@@ -31,10 +33,19 @@ function ProtectedRoute({ children, allowedRoles }) {
   return children;
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
+
 export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
           <Navbar />
           <NotificationToast />
@@ -43,6 +54,7 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/deals" element={<Deals />} />
+              <Route path="/properties" element={<PropertyDiscovery />} />
               <Route path="/login" element={<Login />} />
               <Route path="/projects/:id" element={<ProjectDetail />} />
               <Route 

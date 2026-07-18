@@ -81,9 +81,65 @@ export default function Deals() {
   const [showBlueprintModal, setShowBlueprintModal] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
+  const [negUnits, setNegUnits] = useState(1);
+  const [negDownpayment, setNegDownpayment] = useState(20);
+  const [negDiscount, setNegDiscount] = useState(5);
+  const [negStatus, setNegStatus] = useState(null);
+  const [negMessage, setNegMessage] = useState('');
+  const [negOutcome, setNegOutcome] = useState('');
+  const [negCounterTerms, setNegCounterTerms] = useState(null);
+
   useEffect(() => {
     setCarouselIndex(0);
+    setNegStatus(null);
+    setNegCounterTerms(null);
   }, [selectedId]);
+  
+  const handleNegSubmit = () => {
+    setNegStatus('analyzing');
+    setNegMessage('CasaAI Pricing Controller is analyzing inventory saturation, margin safety index, and funding velocity...');
+    setNegCounterTerms(null);
+
+    setTimeout(() => {
+      const pId = selectedProject?._id || 'proj-001';
+      let maxAllowedDiscount = 10;
+      if (pId === 'proj-003') {
+        maxAllowedDiscount = 6;
+      } else if (pId === 'proj-002') {
+        maxAllowedDiscount = 11;
+      } else {
+        maxAllowedDiscount = 16;
+      }
+
+      let headroom = 0;
+      if (negUnits >= 3) headroom += 3;
+      else if (negUnits >= 2) headroom += 1.5;
+
+      if (negDownpayment >= 40) headroom += 3;
+      else if (negDownpayment >= 30) headroom += 1.5;
+      else if (negDownpayment < 15) headroom -= 3;
+
+      const finalMaxDiscount = maxAllowedDiscount + headroom;
+
+      if (negDiscount <= finalMaxDiscount) {
+        setNegOutcome('approved');
+        setNegMessage(`🎉 Offer Approved! CasaAI has locked the terms. A margin-safe yield of ${finalMaxDiscount.toFixed(1)}% headroom is maintained. Select "Book Allotment" to lock this deal.`);
+      } else if (negDiscount > finalMaxDiscount + 5) {
+        setNegOutcome('rejected');
+        setNegMessage(`❌ Offer Rejected. The requested discount of ${negDiscount}% exceeds builder regulatory margin floors. Please propose more conservative terms.`);
+      } else {
+        setNegOutcome('counter');
+        const counterDiscount = Math.floor(finalMaxDiscount);
+        const counterDownpayment = Math.min(negDownpayment + 15, 50);
+        setNegCounterTerms({
+          discount: counterDiscount,
+          downpayment: counterDownpayment,
+        });
+        setNegMessage(`⚖️ AI Counter-Offer: We cannot support ${negDiscount}% discount under current parameters. However, our pricing swarm has approved a counter of <strong>${counterDiscount}% discount</strong> at your current downpayment, OR <strong>${negDiscount}% discount</strong> if you increase your downpayment to <strong>${counterDownpayment}%</strong>.`);
+      }
+      setNegStatus('done');
+    }, 1500);
+  };
   
   // Viewing schedule form state
   const [showViewingModal, setShowViewingModal] = useState(false);
@@ -296,6 +352,131 @@ export default function Deals() {
               >
                 Book Allotment
               </button>
+            </div>
+          )}
+
+          {/* AI B2B Negotiation Desk */}
+          {selectedProject && (
+            <div className="mt-8 border-t border-slate-200 dark:border-stone-800 pt-6 text-left">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-base">✨</span>
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white">AI B2B Negotiation Desk</h4>
+              </div>
+              
+              <div className="bg-gradient-to-r from-slate-900 to-indigo-950 dark:from-stone-900 dark:to-indigo-950 border border-indigo-900/35 rounded-3xl p-5 text-white relative overflow-hidden">
+                <div className="absolute inset-0 opacity-[0.03] bg-grid" />
+                
+                <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {/* Units Input */}
+                  <div>
+                    <label className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest block mb-1">Wholesale Units</label>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {[1, 2, 3, 4, 5].map(u => (
+                        <button
+                          key={u}
+                          type="button"
+                          onClick={() => setNegUnits(u)}
+                          className={`w-7 h-7 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                            negUnits === u ? 'bg-indigo-650 text-white shadow-md' : 'bg-white/10 text-indigo-200 hover:bg-white/20'
+                          }`}
+                        >
+                          {u}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Downpayment Slider */}
+                  <div>
+                    <label className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest block mb-1">Downpayment — {negDownpayment}%</label>
+                    <input
+                      type="range"
+                      min={10}
+                      max={50}
+                      step={5}
+                      value={negDownpayment}
+                      onChange={(e) => setNegDownpayment(Number(e.target.value))}
+                      className="w-full accent-indigo-500 bg-white/10 mt-2"
+                    />
+                  </div>
+
+                  {/* Target Discount Slider */}
+                  <div>
+                    <label className="text-[9px] font-bold text-indigo-200 uppercase tracking-widest block mb-1">Requested Discount — {negDiscount}%</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={20}
+                      step={1}
+                      value={negDiscount}
+                      onChange={(e) => setNegDiscount(Number(e.target.value))}
+                      className="w-full accent-indigo-500 bg-white/10 mt-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/10 relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <p className="text-[9px] text-indigo-200 font-semibold uppercase">Pricing controlled under RERA margin floors.</p>
+                  <button
+                    type="button"
+                    onClick={handleNegSubmit}
+                    disabled={negStatus === 'analyzing'}
+                    className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:hover:bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-5 py-2.5 rounded-xl border-none shadow-md shadow-indigo-950/30 transition-all cursor-pointer"
+                  >
+                    {negStatus === 'analyzing' ? 'Evaluating...' : '✨ Submit Offer'}
+                  </button>
+                </div>
+
+                {/* Outcome Display */}
+                {negStatus && (
+                  <div className="mt-4 pt-4 border-t border-white/10 animate-fade-in relative z-10">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs">🤖</span>
+                      <p className="text-[9px] font-black text-indigo-200 uppercase tracking-widest">CasaAI pricing response</p>
+                      
+                      {negStatus === 'done' && (
+                        <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ml-auto ${
+                          negOutcome === 'approved' ? 'bg-emerald-500 text-white' :
+                          negOutcome === 'counter' ? 'bg-amber-500 text-stone-950' :
+                          'bg-rose-500 text-white'
+                        }`}>
+                          {negOutcome}
+                        </span>
+                      )}
+                    </div>
+
+                    <p 
+                      className="text-xs text-indigo-100 font-semibold leading-relaxed" 
+                      dangerouslySetInnerHTML={{ __html: negMessage }}
+                    />
+
+                    {negOutcome === 'counter' && negCounterTerms && (
+                      <div className="mt-3 flex gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNegDiscount(negCounterTerms.discount);
+                            pushNotification({ type: 'info', title: 'Counter Accepted', message: `Adjusted discount to ${negCounterTerms.discount}%.` });
+                          }}
+                          className="bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          Accept {negCounterTerms.discount}% Discount
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNegDownpayment(negCounterTerms.downpayment);
+                            pushNotification({ type: 'info', title: 'Counter Accepted', message: `Adjusted downpayment to ${negCounterTerms.downpayment}%.` });
+                          }}
+                          className="bg-white/10 hover:bg-white/20 text-white text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                        >
+                          Increase Downpayment to {negCounterTerms.downpayment}%
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

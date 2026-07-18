@@ -16,6 +16,12 @@ export default function AIVoiceChatSimulator() {
   const chatScrollRef = useRef(null);
   const waveformIntervalRef = useRef(null);
 
+  // ElevenLabs & Speech States
+  const [elevenLabsKey, setElevenLabsKey] = useState(localStorage.getItem('casa_elevenlabs_key') || '');
+  const [selectedVoice, setSelectedVoice] = useState(localStorage.getItem('casa_elevenlabs_voice') || '21m00Tcm4TlvDq8ikWAM');
+  const [showConfig, setShowConfig] = useState(false);
+  const recognitionRef = useRef(null);
+
   // Auto-scroll chat
   useEffect(() => {
     if (chatScrollRef.current) {
@@ -25,9 +31,10 @@ export default function AIVoiceChatSimulator() {
 
   // Handle active audio waveform simulation
   useEffect(() => {
-    if (isCalling && callStatus === 'AI speaking...') {
+    if (isCalling && (callStatus === 'AI speaking...' || callStatus === 'Connected')) {
       waveformIntervalRef.current = setInterval(() => {
-        setWaveformBars(prev => prev.map(() => Math.floor(Math.random() * 26) + 4));
+        const baseHeight = callStatus === 'AI speaking...' ? 25 : 8;
+        setWaveformBars(prev => prev.map(() => Math.floor(Math.random() * baseHeight) + 4));
       }, 100);
     } else {
       if (waveformIntervalRef.current) {
@@ -47,20 +54,146 @@ export default function AIVoiceChatSimulator() {
     { label: 'Check Budget Audit', query: 'What is the cost variance and total spent against Noida baseline?' }
   ];
 
-  // Call simulation
+  // Speech Recognition Wrapper
+  const startListening = () => {
+    if (!isCalling) return;
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      console.warn('Speech recognition is not supported in this browser.');
+      return;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+
+    const rec = new SpeechRecognition();
+    rec.continuous = false;
+    rec.interimResults = false;
+    rec.lang = 'en-US';
+
+    rec.onstart = () => {
+      setCallStatus('Connected');
+    };
+
+    rec.onresult = (event) => {
+      const text = event.results[0][0].transcript;
+      if (text.trim()) {
+        submitQuery(text);
+      }
+    };
+
+    rec.onerror = (e) => {
+      if (e.error === 'no-speech') {
+        // Restart on silence to keep the line active
+        if (isCalling && callStatus === 'Connected') {
+          setTimeout(() => startListening(), 1000);
+        }
+      } else {
+        console.error('Speech recognition error:', e.error);
+      }
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
+  };
+
+  // TTS Voice Output
+  const speakText = async (text) => {
+    if (!isCalling) return;
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+
+    if (elevenLabsKey.trim()) {
+      try {
+        setCallStatus('AI speaking...');
+        const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': elevenLabsKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            text: text,
+            model_id: 'eleven_monolingual_v1',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.75
+            }
+          })
+        });
+
+        if (!response.ok) throw new Error('ElevenLabs response error');
+        
+        const audioBlob = await response.blob();
+        const audio = new Audio(URL.createObjectURL(audioBlob));
+        audio.onended = () => {
+          if (isCalling) {
+            setCallStatus('Connected');
+            startListening();
+          }
+        };
+        audio.play();
+        return;
+      } catch (err) {
+        console.error('ElevenLabs failed, using local browser fallback:', err);
+        pushNotification({
+          type: 'warning',
+          title: 'ElevenLabs Offline',
+          message: 'Defaulting to local text-to-speech synthesis.'
+        });
+      }
+    }
+
+    // Web Speech Synthesis
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.onstart = () => {
+        setCallStatus('AI speaking...');
+      };
+      utter.onend = () => {
+        if (isCalling) {
+          setCallStatus('Connected');
+          startListening();
+        }
+      };
+      utter.onerror = () => {
+        if (isCalling) {
+          setCallStatus('Connected');
+          startListening();
+        }
+      };
+      window.speechSynthesis.speak(utter);
+    } else {
+      setCallStatus('Connected');
+    }
+  };
+
+  // Call handlers
   const startCall = () => {
     setIsCalling(true);
     setCallStatus('Calling...');
     setMessages([]);
     
-    // Simulate ring delay
     setTimeout(() => {
       setCallStatus('Connected');
       pushNotification({
         type: 'info',
         title: '📞 Call Connected',
-        message: 'CasaEstate AI Voice Desk has answered. Ask your query now.'
+        message: 'CasaEstate AI Voice Desk is online. Speak clearly into your mic.'
       });
+      
+      const greeting = "Hello! I am your CasaEstate voice copilot. I can check construction delay parameters, inspect curing telemetry, or audit project cost spreadsheets. How can I help you today?";
+      setMessages([{ sender: 'bot', text: `[AI Voice Response] ${greeting}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+      speakText(greeting);
     }, 1500);
   };
 
@@ -68,6 +201,16 @@ export default function AIVoiceChatSimulator() {
     setIsCalling(false);
     setCallStatus('Idle');
     if (waveformIntervalRef.current) clearInterval(waveformIntervalRef.current);
+    
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    
     pushNotification({
       type: 'info',
       title: '📞 Call Disconnected',
@@ -75,8 +218,29 @@ export default function AIVoiceChatSimulator() {
     });
   };
 
+  const getMockReply = (queryText) => {
+    const q = queryText.toLowerCase();
+    if (q.includes('curing') || q.includes('moisture') || q.includes('strength') || q.includes('concrete')) {
+      return "Noida Tower A utilizes M40 self-compacting concrete with Fe550 reinforcement bars. Telemetry sensors confirm curing has reached 98.4% of the target 28-day threshold, showing optimal moisture.";
+    } else if (q.includes('delay') || q.includes('schedule') || q.includes('mep') || q.includes('variance')) {
+      return "Noida Tower B MEP works are stable with a schedule variance of +1.2 days. Finishes are slightly delayed but fully cushioned by inventory reserves, keeping the overall project on track.";
+    } else if (q.includes('rera') || q.includes('license') || q.includes('permit') || q.includes('number')) {
+      return "RERA registration details: Noida (UP-RERA-2026-REG-88209), Gurugram (HR-RERA-2026-REG-74011), Worli Mumbai (MH-RERA-2026-REG-10925). Status: Active & Sanctioned.";
+    } else if (q.includes('budget') || q.includes('cost') || q.includes('spent') || q.includes('variance') || q.includes('audit')) {
+      return "Noida Tower A spent ledger stands at ₹4.2 Crore against a projected ₹4.5 Crore baseline, yielding a positive cost variance of -₹30 Lakhs due to early supplier procurement locks.";
+    } else {
+      return `I have logged your request regarding "${queryText}". All platforms show active RERA clearances and structural inspections are certified.`;
+    }
+  };
+
   const submitQuery = async (queryText) => {
     if (!queryText.trim()) return;
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+    }
 
     if (activeTab === 'chat') {
       setMessages(prev => [...prev, { sender: 'user', text: queryText, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
@@ -96,17 +260,17 @@ export default function AIVoiceChatSimulator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: queryText, customApiKey: activeKey })
       });
+      if (!response.ok) throw new Error('API server returned error');
       const data = await response.json();
+      if (!data.reply) throw new Error('Empty reply');
       
       if (activeTab === 'call') {
-        // Voice response
         setMessages(prev => [
           ...prev,
           { sender: 'bot', text: `[AI Voice Response] ${data.reply}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
         ]);
-        setCallStatus('Connected');
+        speakText(data.reply);
       } else {
-        // Chat response
         setMessages(prev => [
           ...prev,
           { sender: 'bot', text: data.reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
@@ -114,23 +278,21 @@ export default function AIVoiceChatSimulator() {
       }
     } catch {
       // Offline fallback
-      setTimeout(() => {
-        let reply = "All construction works managed by CasaEstate carry certified registrations under RERA: Noida (UP-RERA-2026-REG-88209), Gurugram (HR-RERA-2026-REG-74011), Mumbai (MH-RERA-2026-REG-10925). Noida Tower A curing has reached 98.4% strength.";
-        if (activeTab === 'call') {
-          setMessages(prev => [
-            ...prev,
-            { sender: 'bot', text: `[AI Voice Response] ${reply}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-          ]);
-          setCallStatus('Connected');
-        } else {
-          setMessages(prev => [
-            ...prev,
-            { sender: 'bot', text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-          ]);
-        }
-      }, 1000);
+      const reply = getMockReply(queryText);
+      if (activeTab === 'call') {
+        setMessages(prev => [
+          ...prev,
+          { sender: 'bot', text: `[AI Voice Response] ${reply}`, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+        ]);
+        speakText(reply);
+      } else {
+        setMessages(prev => [
+          ...prev,
+          { sender: 'bot', text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+        ]);
+      }
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 800);
     }
   };
 
@@ -359,9 +521,53 @@ export default function AIVoiceChatSimulator() {
               </svg>
             </button>
           </div>
-
         </div>
       )}
+
+      {/* ElevenLabs Configuration Accordion */}
+      <div className="bg-slate-950/80 border border-slate-850 rounded-2xl p-4 text-slate-350 text-xs">
+        <div className="flex justify-between items-center cursor-pointer select-none" onClick={() => setShowConfig(!showConfig)}>
+          <span className="font-bold text-[10px] text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+            ⚙️ ElevenLabs Voice Settings {elevenLabsKey ? '🟢 Active' : '🌐 Browser Fallback'}
+          </span>
+          <span className="text-[10px] text-slate-500 font-bold uppercase">{showConfig ? 'Hide' : 'Configure'}</span>
+        </div>
+        {showConfig && (
+          <div className="mt-4 space-y-4 border-t border-slate-900 pt-4 animate-fade-in text-left">
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">ElevenLabs API Key</label>
+              <input
+                type="password"
+                placeholder="Paste your ElevenLabs API Key here..."
+                value={elevenLabsKey}
+                onChange={(e) => {
+                  setElevenLabsKey(e.target.value);
+                  localStorage.setItem('casa_elevenlabs_key', e.target.value);
+                }}
+                className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
+              />
+              <p className="text-[9px] text-slate-500 mt-1">If blank, the system automatically uses the high-performance Web Speech Synthesis engine fallback.</p>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Select Voice Model</label>
+              <select
+                value={selectedVoice}
+                onChange={(e) => {
+                  setSelectedVoice(e.target.value);
+                  localStorage.setItem('casa_elevenlabs_voice', e.target.value);
+                }}
+                className="w-full bg-slate-900 border border-slate-800 text-white rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-500"
+              >
+                <option value="21m00Tcm4TlvDq8ikWAM">Rachel (Female, Pleasant)</option>
+                <option value="29vD33N1CtxCmqQRPOHJ">Drew (Male, Professional)</option>
+                <option value="2EiwWnXF2V4jnm76CnwS">Clyde (Male, Warm)</option>
+                <option value="pNInz6obpgus5TxJe5m0">Adam (Male, Deep)</option>
+                <option value="piTKgcLEGmPEe24Z1eKf">Nicole (Female, Whisper)</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
 
     </div>
   );

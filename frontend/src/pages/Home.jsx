@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import BookingForm from '../components/BookingForm';
 import ProjectCard from '../components/ProjectCard';
 import AIVoiceChatSimulator from '../components/AIVoiceChatSimulator';
+import CasaOpsSwarmConsole from '../components/CasaOpsSwarmConsole';
 import { useApp } from '../context/AppContext';
 import { projectsApi } from '../services/api';
 
@@ -172,6 +173,7 @@ export default function Home() {
       title: '💎 Portal Selected',
       message: 'Logged in as Client. You can now browse properties & simulate AI tools.'
     });
+    navigate('/properties');
   };
 
   const selectResident = () => {
@@ -316,6 +318,75 @@ export default function Home() {
       </section>
 
 
+
+      {/* 🏘️ Featured Properties + Discovery Entry Point */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#f4f4f3] dark:bg-stone-950 text-left border-b border-slate-205 dark:border-stone-800">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold text-slate-400 dark:text-stone-500 uppercase tracking-widest mb-1">Registered Towers</p>
+              <h2 className="text-2xl font-black uppercase tracking-wider text-slate-900 dark:text-white mt-1">Featured Properties</h2>
+              <p className="text-xs text-slate-500 dark:text-stone-400 mt-1">A snapshot of live listings — filter by budget, BHK, possession date, amenities, and locality.</p>
+            </div>
+            <Link
+              to="/properties"
+              className="btn-primary inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider py-2.5 px-5 rounded-xl whitespace-nowrap"
+            >
+              Browse All & Filter →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredProjects.slice(0, 3).map((proj, idx) => (
+              <ProjectCard key={proj._id} project={proj} index={idx} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 🤖 CasaAI Voice & Chat Operations Desk */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 text-left border-b border-slate-805 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.02] bg-grid" />
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+          <div className="lg:col-span-1 space-y-4 text-white">
+            <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest font-mono">Conversational AI Desk</p>
+            <h2 className="text-3xl font-black uppercase tracking-wider">AI Voice & Chat Portal</h2>
+            <p className="text-xs text-indigo-200/70 leading-relaxed font-semibold">
+              Simulate an audio phone call or text session directly with our central builder logs. Ask about concrete moisture levels, steel tensile strength, project cost balance, or active RERA licensing.
+            </p>
+            <div className="flex gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-white/10 text-indigo-250 border border-white/10 rounded-lg font-mono">
+                📞 Audio Simulator Enabled
+              </span>
+            </div>
+          </div>
+          <div className="lg:col-span-2">
+            <AIVoiceChatSimulator />
+          </div>
+        </div>
+      </section>
+
+      {/* 🤖 CasaAI Multi-Agent Swarm Center */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-950 text-left border-b border-stone-900 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.03] bg-grid" />
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
+          <div className="lg:col-span-1 space-y-4 text-white">
+            <p className="text-xs font-bold text-indigo-400 uppercase tracking-widest font-mono">Autonomous Orchestration</p>
+            <h2 className="text-3xl font-black uppercase tracking-wider">CasaOps Swarm Center</h2>
+            <p className="text-xs text-indigo-200/70 leading-relaxed font-semibold">
+              Observe our autonomous agent swarm executing real-time task pipelines. When a structural site telemetry event occurs, Agent Alpha (Operations), Agent Beta (Financial Analyst), and Agent Gamma (Narrative Synthesizer) collaborate to adjust cost curves and compile compliance audits automatically.
+            </p>
+            <div className="flex gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-white/10 text-indigo-250 border border-white/10 rounded-lg font-mono">
+                🤖 3 Active Swarm Nodes
+              </span>
+            </div>
+          </div>
+          <div className="lg:col-span-2">
+            <CasaOpsSwarmConsole />
+          </div>
+        </div>
+      </section>
 
       {/* 👥 Segregated Operational Hub */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white dark:bg-stone-900 text-left border-b border-slate-205 dark:border-stone-800">

@@ -42,11 +42,13 @@ export default function CasaBotWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text })
       });
+      if (!response.ok) throw new Error('API server returned error');
       const data = await response.json();
+      if (!data.reply) throw new Error('Empty reply');
       
       const botMsg = {
         sender: 'bot',
-        text: data.reply || "I encountered an issue verifying the structural database logs. Please verify connection.",
+        text: data.reply,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       setMessages((prev) => [...prev, botMsg]);
@@ -74,9 +76,9 @@ export default function CasaBotWidget() {
           text: reply,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }]);
-      }, 1000);
+      }, 800);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 800);
     }
   };
 
