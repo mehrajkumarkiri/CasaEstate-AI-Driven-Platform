@@ -1,4 +1,4 @@
-# AuraEstates — Setup & Run Guide
+# CasaEstates — Setup & Run Guide
 
 ## Prerequisites
 - Node.js v18+ (LTS)
